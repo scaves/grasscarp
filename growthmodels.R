@@ -301,24 +301,3 @@ secondlow = low(linf[,2]) * (1-exp(-low(k[,2])*(ages-low(t0[,2]))))
 thirdlow = low(linf[,3]) * (1-exp(-low(k[,3])*(ages-low(t0[,3]))))
 fourthlow = low(linf[,4]) * (1-exp(-low(k[,4])*(ages-low(t0[,4]))))
 fifthlow = low(linf[,5]) * (1-exp(-low(k[,5])*(ages-low(t0[,5]))))
-
-
-
-
-  
-    
-
-     
-
-    
-    
-
-    
-    
-    
-    
-    
-
-    
-    
-    
