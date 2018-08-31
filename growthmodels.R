@@ -19,7 +19,6 @@
   up = function(x){
     quantile(x, probs=c(0.975))
   }
-
   
   
 # Data manipulation -------------------------------------------------------
