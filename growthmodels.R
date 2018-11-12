@@ -161,7 +161,7 @@ for(i in 1:nrow(res2)){
           L[i] <- Linf[group[i]]*(1-exp(-K[group[i]]*(Ti[i]-to[group[i]])))
         }
 
-      # Priors on VBGM parameters, estimating the parameters for each group (old and new fish)
+      # Priors on VBGM parameters, estimating the parameters for each group (each year)
         for(j in 1:ngroups){ 
         Linf[j] ~ dlnorm(10, 0.001)
         logit(K[j]) <- k[j]
@@ -204,9 +204,9 @@ for(i in 1:nrow(res2)){
   # need to change iterations, thinning rate and burnins to get the model to 
   # converge, it is close and I am getting good values, dave used 500000 iterations,
   # and thinning rate of 100
-  ni <- 25000  # Number of draws from posterior (for each chain)
-  nt <- 5000       # Thinning rate
-  nb <- 1500  # Number of draws to discard as burn-in
+  ni <- 2500  # Number of draws from posterior (for each chain)
+  nt <- 500       # Thinning rate
+  nb <- 150  # Number of draws to discard as burn-in
   nc <- 3          # Number of chains
 
 # Call jags and run the model
@@ -301,3 +301,164 @@ secondlow = low(linf[,2]) * (1-exp(-low(k[,2])*(ages-low(t0[,2]))))
 thirdlow = low(linf[,3]) * (1-exp(-low(k[,3])*(ages-low(t0[,3]))))
 fourthlow = low(linf[,4]) * (1-exp(-low(k[,4])*(ages-low(t0[,4]))))
 fifthlow = low(linf[,5]) * (1-exp(-low(k[,5])*(ages-low(t0[,5]))))
+
+
+
+
+
+
+# Biomass -----------------------------------------------------------------
+# start by merging all the data together
+
+hydrilla = read.csv('gcStockingAndHydrilla.csv')
+
+hydrilla
+names(hydrilla)
+names(fish)
+colnames(hydrilla)[1] = 'Year'
+names(hydrilla)
+
+biomass = merge(x = hydrilla, y = fish, by = 'Year')
+head(biomass)
+tail(biomass)
+
+
+# now we have to add biomass as a continuous variable of hydrilla to the model
+
+
+
+
+
+
+
+
+
+
+
+
+
+# havent done this data, this is where hydrilla biomass will come into play
+
+# need to move the K in the model to the likelihood and loop it in, as well as
+# adding biomass data and beta to the K function in the priors
+
+# make some continuous covariate predictions
+# remember that we added a beta and then defined it as little k that is now on the
+# logit scale
+
+modelString1 = "
+    model{
+      # Likelihood
+          for(i in 1:N){
+            Y[i] ~ dnorm(L[i], tau[Ti[i]])
+            L[i] <- Linf[group[i]]*(1-exp(-K[group[i]]*(Ti[i]-to[group[i]])))
+            logit[K[i]] <- beta[i] + k[i] * K
+          }
+
+    # Priors on VBGM parameters, estimating the parameters for each group (old and new fish)
+          for(j in 1:ngroups){ 
+            Linf[j] ~ dlnorm(10, 0.001)
+            k[j] ~ dnorm(0, 0.001)
+            beta[j] ~ dnorm(0,0.001)
+            to[j] ~ dunif(-10, 0)
+          }
+
+    # Precision for length at age distribution
+          for(t in 1:Tmax){
+            tau[t] ~ dgamma(0.001, 0.0001)
+          }
+        }"
+
+
+  
+# Package the data for JAGS, adding new data for groups and ngroups
+vb_data_cont = list(
+  Y = biomass$Length,
+  K = biomass$ha,
+  Ti = biomass$Age,
+  N = nrow(biomass),
+  Tmax = max(biomass$Age),
+  group = as.numeric(as.factor(biomass$Year)),
+  ngroups = length(unique(biomass$Year))
+)
+
+# Parameters monitored
+params1 = c('linf', 'K', 't0')
+
+# Initial values for parameters
+inits1 <- function(){
+  list(
+    beta = runif(length(unique(biomass$ha)), 1, 10),
+    k = rnorm(length(unique(fish$Year)), 0, 1),
+    Linf = runif(length(unique(fish$Year)), 1, 10),
+    K = rnorm(length(unique(fish$Year)), 0, 1),
+    to = runif(length(unique(fish$Year)), -10, 0),
+    tau = rgamma(max(fish$Age), .01, 1)
+  )
+}
+
+# MCMC settings
+# need to change iterations, thinning rate and burnins to get the model to 
+# converge, it is close and I am getting good values, dave used 500000 iterations,
+# and thinning rate of 100
+ni1 <- 2500  # Number of draws from posterior (for each chain)
+nt1 <- 500       # Thinning rate
+nb1 <- 150  # Number of draws to discard as burn-in
+nc1 <- 3          # Number of chains
+
+# Call jags and run the model
+vb_mod_cont <- jags(data=vb_data_cont, inits=inits1, params1, textConnection(modelString1),
+               n.chains = nc1, n.thin = nt1, n.iter = ni1, n.burnin = nb1,
+               working.directory = getwd())
+# make sure we replace the text file with a new function definging the model above
+
+
+
+# Results -----  
+# Print a summary of the model
+print(vb_mod_cont)
+
+
+k = vb_mod_cont$BUGSoutput$sims.list$k
+beta = vb_mod_cont$BUGSoutput$sims.list$beta
+
+
+
+
+# since all data is on range from -2 to 2
+newBiomass = seq(-2, 2, 0.1)    
+
+# make an empty matrix to then fill with data later
+preds = matrix(NA, nrow = length(k), ncol = length(newBiomass))
+
+for(i in 1:nrow(preds)){
+  for(t in 1:length(newBiomass)){
+    preds[i, t] = inv.logit(k[i] + beta[i]*newBiomass[t])
+  }
+}
+
+par(mar = c(5,5,1,1))
+plot(x = newBiomass, y = preds[1, ], type = 'l',
+     col = rgb(0.4, 0.4, 0.4, 0.05),
+     xlab = "Biomass", ylab = "k",
+     yaxt = 'n', ylim = c(0, 1))  
+axis(2, las = 2)
+
+# now we add the loop for the rest of the data
+
+for (i in 2:nrow(preds)){
+  lines(x = newBiomass, y = preds[i, ],
+        col = rgb(0.4, 0.4, 0.4, 0.05))
+}
+
+# get the mean and 95% CRIs, defined the upper and lower CRI functions above
+
+lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = mean),
+      col = 'blue', lwd = 2)
+lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = low),
+      col = 'red', lwd = 2, lty = 2)
+lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
+      col = 'red', lwd = 2, lty = 2)
+
+
+
