@@ -31,6 +31,18 @@ head(fish)
 tail(fish)  
 nrow(fish)
 
+names(fish)[2] <- 'yearc'
+
+
+maxes <- aggregate(Age~fishID, fish, max)
+names(maxes)[2] <- 'agec'
+fish <- merge(fish, maxes)
+
+fish$Year <- fish$yearc-(fish$agec-fish$Age)
+
+
+
+
 # July 2, basic von bert ------------------------------------------------------------------
 
 
@@ -330,69 +342,59 @@ tail(biomass)
 
 
 
-
-
-
-
-
-
-
-# havent done this data, this is where hydrilla biomass will come into play
-
 # need to move the K in the model to the likelihood and loop it in, as well as
 # adding biomass data and beta to the K function in the priors
 
 # make some continuous covariate predictions
-# remember that we added a beta and then defined it as little k that is now on the
-# logit scale
+
+
 
 modelString1 = "
     model{
       # Likelihood
           for(i in 1:N){
             Y[i] ~ dnorm(L[i], tau[Ti[i]])
-            L[i] <- Linf[group[i]]*(1-exp(-K[group[i]]*(Ti[i]-to[group[i]])))
-            logit[K[i]] <- beta[i] + k[i] * K
+            L[i] <- exp(lLinf)*(1-exp(-K[i]*(Ti[i]-to)))
+            
+            log(K[i]) <- beta0 + betah*ha[i]
           }
 
-    # Priors on VBGM parameters, estimating the parameters for each group (old and new fish)
-          for(j in 1:ngroups){ 
-            Linf[j] ~ dlnorm(10, 0.001)
-            k[j] ~ dnorm(0, 0.001)
-            beta[j] ~ dnorm(0,0.001)
-            to[j] ~ dunif(-10, 0)
-          }
+      # Priors on VBGM parameters, estimating the parameters for each group 
+        lLinf ~ dnorm(0, 0.001)
+        betah ~ dnorm(0, 0.001)
+        beta0 ~ dnorm(0,0.001)
+        to ~ dnorm(0, 0.001)
 
-    # Precision for length at age distribution
-          for(t in 1:Tmax){
-            tau[t] ~ dgamma(0.001, 0.0001)
-          }
-        }"
+      # Derived values of VBGM params
+        Linf <- exp(lLinf)
+  
+      # Precision for length at age distribution
+        for(t in 1:Tmax){
+          tau[t] ~ dgamma(0.001, 0.0001)
+        }
+     }"
 
 
   
 # Package the data for JAGS, adding new data for groups and ngroups
 vb_data_cont = list(
   Y = biomass$Length,
-  K = biomass$ha,
+  ha = as.vector(scale(biomass$ha)),
   Ti = biomass$Age,
   N = nrow(biomass),
-  Tmax = max(biomass$Age),
-  group = as.numeric(as.factor(biomass$Year)),
-  ngroups = length(unique(biomass$Year))
+  Tmax = max(biomass$Age)
 )
 
 # Parameters monitored
-params1 = c('linf', 'K', 't0')
+params1 = c('beta0', 'betah', 'lLinf', 'to')
 
 # Initial values for parameters
 inits1 <- function(){
   list(
-    beta = runif(length(unique(biomass$ha)), 1, 10),
-    k = rnorm(length(unique(fish$Year)), 0, 1),
-    Linf = runif(length(unique(fish$Year)), 1, 10),
-    K = rnorm(length(unique(fish$Year)), 0, 1),
-    to = runif(length(unique(fish$Year)), -10, 0),
+    beta0 = rnorm(1, 0, 1),
+    betah = rnorm(1, 0, 1),
+    lLinf = runif(1, 1, 10),
+    to = runif(1, -10, 0),
     tau = rgamma(max(fish$Age), .01, 1)
   )
 }
@@ -401,8 +403,8 @@ inits1 <- function(){
 # need to change iterations, thinning rate and burnins to get the model to 
 # converge, it is close and I am getting good values, dave used 500000 iterations,
 # and thinning rate of 100
-ni1 <- 2500  # Number of draws from posterior (for each chain)
-nt1 <- 500       # Thinning rate
+ni1 <- 250  # Number of draws from posterior (for each chain)
+nt1 <- 5       # Thinning rate
 nb1 <- 150  # Number of draws to discard as burn-in
 nc1 <- 3          # Number of chains
 
@@ -411,7 +413,7 @@ vb_mod_cont <- jags(data=vb_data_cont, inits=inits1, params1, textConnection(mod
                n.chains = nc1, n.thin = nt1, n.iter = ni1, n.burnin = nb1,
                working.directory = getwd())
 # make sure we replace the text file with a new function definging the model above
-
+vb_mod_cont
 
 
 # Results -----  
@@ -422,6 +424,16 @@ print(vb_mod_cont)
 k = vb_mod_cont$BUGSoutput$sims.list$k
 beta = vb_mod_cont$BUGSoutput$sims.list$beta
 
+
+
+
+
+
+
+
+# plotting code that I haven't looked at yet becasue the model isn't working
+# next step is to tear this apart and determine best way to plot continuous 
+# variable (hydrilla biomass) model
 
 
 
