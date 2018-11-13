@@ -195,8 +195,8 @@ for(i in 1:nrow(res2)){
     Ti = fish$Age,
     N = nrow(fish),
     Tmax = max(fish$Age),
-    group = as.numeric(as.factor(fish$Year)),
-    ngroups = length(unique(fish$Year))
+    group = as.numeric(as.factor(fish$yearc)),
+    ngroups = length(unique(fish$yearc))
   )
 
 # Parameters monitored
@@ -205,9 +205,9 @@ for(i in 1:nrow(res2)){
 # Initial values for parameters
   inits <- function(){
     list(
-      Linf = runif(length(unique(fish$Year)), 1, 10),
-      k = rnorm(length(unique(fish$Year)), 0, 1),
-      to = runif(length(unique(fish$Year)), -10, 0),
+      Linf = runif(length(unique(fish$yearc)), 1, 10),
+      k = rnorm(length(unique(fish$yearc)), 0, 1),
+      to = runif(length(unique(fish$yearc)), -10, 0),
       tau = rgamma(max(fish$Age), .01, 1)
     )
   }
