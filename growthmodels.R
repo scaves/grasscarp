@@ -1,6 +1,7 @@
 # Front-end needs ---------------------------------------------------------
 # Load necessary packages
   library(R2jags)
+  library(FSA)
 
 # Clear the global environment
   rm(list=ls())
@@ -25,7 +26,7 @@
 # Data read
   fish = read.csv('grasscarplengths.csv')  
   
-# Drop missing data and most recent year (for 2006-2011 mods)  
+# Drop missing data   
   fish = fish[!is.na(fish$Age) & !is.na(fish$Length), ]
 head(fish)
 tail(fish)  
@@ -164,7 +165,7 @@ for(i in 1:nrow(res2)){
 }
 
 
-# VBGM without site effects -----------------------------------
+# VBGM without site effects, between year captured -----------------------------------
   modelString = "
     model{
       # Likelihood
@@ -229,7 +230,7 @@ for(i in 1:nrow(res2)){
   
 
   
-# Results -----  
+# Results of year capture model-----  
 # Print a summary of the model
   print(vb_mod)
   
@@ -240,7 +241,7 @@ for(i in 1:nrow(res2)){
   
 
 
-# model predictions -------------------------------------------------------
+# visualization of the data (year capture) -------------------------------------------------------
 
 boxplot(k, col = 'gray87', xlab = 'year', ylab = 'k') 
 
@@ -293,6 +294,9 @@ lines(x = ages, y = fifth, col = 'yellow')
      mtext(expression(paste('Age (years)')),
            side=1, line=2.5)
      mtext('Total length (mm)', side=2, line=2.5) 
+legend('bottomright', inset = 0.05,legend=c("2006", "2007", '2009', '2010', '2017'),
+       col=c("black", "red", 'blue', 'green', 'yellow'), lty = 1, title = 'Year Capture',
+       box.lty = 0)
 
 # figure out the max age of fish in each given year
 max(fish$Age[fish$Year == 2006])
@@ -318,8 +322,7 @@ fifthlow = low(linf[,5]) * (1-exp(-low(k[,5])*(ages-low(t0[,5]))))
 
 
 
-
-# Biomass -----------------------------------------------------------------
+# Biomass data read and manipulation -----------------------------------------------------------------
 # start by merging all the data together
 
 hydrilla = read.csv('gcStockingAndHydrilla.csv')
@@ -346,6 +349,9 @@ tail(biomass)
 # adding biomass data and beta to the K function in the priors
 
 # make some continuous covariate predictions
+
+
+# Biomass model -----------------------------------------------------------
 
 
 
@@ -403,8 +409,8 @@ inits1 <- function(){
 # need to change iterations, thinning rate and burnins to get the model to 
 # converge, it is close and I am getting good values, dave used 500000 iterations,
 # and thinning rate of 100
-ni1 <- 250  # Number of draws from posterior (for each chain)
-nt1 <- 5       # Thinning rate
+ni1 <- 2500  # Number of draws from posterior (for each chain)
+nt1 <- 50       # Thinning rate
 nb1 <- 150  # Number of draws to discard as burn-in
 nc1 <- 3          # Number of chains
 
@@ -416,18 +422,22 @@ vb_mod_cont <- jags(data=vb_data_cont, inits=inits1, params1, textConnection(mod
 vb_mod_cont
 
 
-# Results -----  
+# data visualization biomass, still a work in progress -----  
+
+
 # Print a summary of the model
 print(vb_mod_cont)
 
 
 k = vb_mod_cont$BUGSoutput$sims.list$k
-beta = vb_mod_cont$BUGSoutput$sims.list$beta
+betah = vb_mod_cont$BUGSoutput$sims.list$betah
+beta0 = vb_mod_cont$BUGSoutput$sims.list$beta0
+lLinf = vb_mod_cont$BUGSoutput$sims.list$lLinf
+
+# exp(lLinf)
 
 
-
-
-
+# vb_mod_cont$BUGSoutput$sims.list
 
 
 
@@ -441,19 +451,22 @@ beta = vb_mod_cont$BUGSoutput$sims.list$beta
 newBiomass = seq(-2, 2, 0.1)    
 
 # make an empty matrix to then fill with data later
-preds = matrix(NA, nrow = length(k), ncol = length(newBiomass))
+preds = matrix(NA, nrow = length(beta0), ncol = length(newBiomass))
 
 for(i in 1:nrow(preds)){
   for(t in 1:length(newBiomass)){
-    preds[i, t] = inv.logit(k[i] + beta[i]*newBiomass[t])
+    preds[i, t] = (beta0[i] + betah[i]*newBiomass[t])
   }
 }
+preds = exp(preds)
+
+
 
 par(mar = c(5,5,1,1))
 plot(x = newBiomass, y = preds[1, ], type = 'l',
-     col = rgb(0.4, 0.4, 0.4, 0.05),
+    # col = rgb(0.4, 0.4, 0.4, 0.05),
      xlab = "Biomass", ylab = "k",
-     yaxt = 'n', ylim = c(0, 1))  
+     yaxt = 'n', ylim = c(0,1))  
 axis(2, las = 2)
 
 # now we add the loop for the rest of the data
