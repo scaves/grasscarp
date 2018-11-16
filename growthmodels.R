@@ -42,9 +42,7 @@ fish <- merge(fish, maxes)
 fish$Year <- fish$yearc-(fish$agec-fish$Age)
 
 
-
-
-# July 2, basic von bert ------------------------------------------------------------------
+# basic von bert ------------------------------------------------------------------
 
 
 # lets makle a von bert model, and then let it converge for us
@@ -106,7 +104,7 @@ lines(x = ages, y = uPred, lty = 2, col = 'blue', lwd = 2)
 
 
 
-# July 9, bootstrap fitting ------------------------------------------------------------------
+# bootstrap fitting ------------------------------------------------------------------
 
 # need to make a blank list in order to fill it with the loop
 nruns = 1000
@@ -227,10 +225,9 @@ for(i in 1:nrow(res2)){
     n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb,
     working.directory = getwd())
 # make sure we replace the text file with a new function definging the model above
-  
 
   
-# Results of year capture model-----  
+# Results of year capture model -----  
 # Print a summary of the model
   print(vb_mod)
   
@@ -244,23 +241,15 @@ for(i in 1:nrow(res2)){
 # visualization of the data (year capture) -------------------------------------------------------
 
 boxplot(k, col = 'gray87', xlab = 'year', ylab = 'k') 
-
   
 boxplot(linf, col = 'gray87', xlab = 'year', ylab = 'linf') 
   
-  
-  
-  
 # show the different factor levels within the data
-
 fish$YearF = as.numeric(as.factor(fish$Year)) 
 
-
-
-
-  
+# make a sequences of ages for the plots
 ages = seq(1, max(fish$Age), 1)
-
+# take the posterior distributions and create the vbgm for each year
 first = mean(linf[,1]) * (1-exp(-mean(k[,1])*(ages-mean(t0[,1]))))
 second = mean(linf[,2]) * (1-exp(-mean(k[,2])*(ages-mean(t0[,2]))))
 third = mean(linf[,3]) * (1-exp(-mean(k[,3])*(ages-mean(t0[,3]))))
@@ -286,9 +275,7 @@ lines(x = ages, y = third, col = 'blue')
 lines(x = ages, y = fourth, col = 'green')
 lines(x = ages, y = fifth, col = 'yellow')
 
-
-
-  # add in the axes and labels
+# add in the axes and labels
      axis(1, pos=0)
      axis(2, pos=0, las=2)  
      mtext(expression(paste('Age (years)')),
@@ -319,12 +306,9 @@ fourthlow = low(linf[,4]) * (1-exp(-low(k[,4])*(ages-low(t0[,4]))))
 fifthlow = low(linf[,5]) * (1-exp(-low(k[,5])*(ages-low(t0[,5]))))
 
 
-
-
-
 # Biomass data read and manipulation -----------------------------------------------------------------
-# start by merging all the data together
 
+# start by merging all the data together
 hydrilla = read.csv('gcStockingAndHydrilla.csv')
 
 hydrilla
@@ -341,19 +325,7 @@ tail(biomass)
 # now we have to add biomass as a continuous variable of hydrilla to the model
 
 
-
-
-
-
-# need to move the K in the model to the likelihood and loop it in, as well as
-# adding biomass data and beta to the K function in the priors
-
-# make some continuous covariate predictions
-
-
 # Biomass model -----------------------------------------------------------
-
-
 
 modelString1 = "
     model{
