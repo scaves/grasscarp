@@ -332,20 +332,21 @@ modelString1 = "
       # Likelihood
           for(i in 1:N){
             Y[i] ~ dnorm(L[i], tau[Ti[i]])
-            L[i] <- exp(lLinf)*(1-exp(-K[i]*(Ti[i]-to)))
+            L[i] <- exp(lLinf[i])*(1-exp(-K[i]*(Ti[i]-to)))
             
-            log(K[i]) <- beta0 + betah*ha[i]
+            log(K[i]) <- beta0_k + betah_k*ha[i]
+            log(lLinf[i]) <- beta0_l + betah_l*ha[i]
+            
+
           }
 
       # Priors on VBGM parameters, estimating the parameters for each group 
-        lLinf ~ dnorm(0, 0.001)
-        betah ~ dnorm(0, 0.001)
-        beta0 ~ dnorm(0,0.001)
+        betah_k ~ dnorm(0, 0.001)
+        beta0_k ~ dnorm(0,0.001)
+        beta0_l ~ dnorm(0,0.001)
+        betah_l ~ dnorm(0,0.001)
         to ~ dnorm(0, 0.001)
 
-      # Derived values of VBGM params
-        Linf <- exp(lLinf)
-  
       # Precision for length at age distribution
         for(t in 1:Tmax){
           tau[t] ~ dgamma(0.001, 0.0001)
@@ -364,14 +365,15 @@ vb_data_cont = list(
 )
 
 # Parameters monitored
-params1 = c('beta0', 'betah', 'lLinf', 'to')
+params1 = c('beta0_k', 'betah_k', 'betah_l', 'beta0_l', 'to')
 
 # Initial values for parameters
 inits1 <- function(){
   list(
-    beta0 = rnorm(1, 0, 1),
-    betah = rnorm(1, 0, 1),
-    lLinf = runif(1, 1, 10),
+    beta0_k = rnorm(1, 0, 1),
+    betah_k = rnorm(1, 0, 1),
+    betah_l = rnorm(1, 0, 1),
+    beta0_l = rnorm(1, 0, 1),
     to = runif(1, -10, 0),
     tau = rgamma(max(fish$Age), .01, 1)
   )
@@ -381,9 +383,9 @@ inits1 <- function(){
 # need to change iterations, thinning rate and burnins to get the model to 
 # converge, it is close and I am getting good values, dave used 500000 iterations,
 # and thinning rate of 100
-ni1 <- 2500  # Number of draws from posterior (for each chain)
+ni1 <- 250  # Number of draws from posterior (for each chain)
 nt1 <- 50       # Thinning rate
-nb1 <- 150  # Number of draws to discard as burn-in
+nb1 <- 15  # Number of draws to discard as burn-in
 nc1 <- 3          # Number of chains
 
 # Call jags and run the model
