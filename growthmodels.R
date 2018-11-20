@@ -336,16 +336,15 @@ modelString1 = "
             
             log(K[i]) <- beta0_k + betah_k*ha[i]
             log(lLinf[i]) <- beta0_l + betah_l*ha[i]
-            
-
+          
           }
 
       # Priors on VBGM parameters, estimating the parameters for each group 
-        betah_k ~ dnorm(0, 0.001)
-        beta0_k ~ dnorm(0,0.001)
-        beta0_l ~ dnorm(0,0.001)
-        betah_l ~ dnorm(0,0.001)
-        to ~ dnorm(0, 0.001)
+        betah_k ~ dnorm(0, 0.0001)
+        beta0_k ~ dnorm(0, 0.0001)
+        beta0_l ~ dnorm(6.5, 0.0001)
+        betah_l ~ dnorm(0, 0.0001)
+        to ~ dnorm(0, 0.0001)
 
       # Precision for length at age distribution
         for(t in 1:Tmax){
@@ -373,7 +372,7 @@ inits1 <- function(){
     beta0_k = rnorm(1, 0, 1),
     betah_k = rnorm(1, 0, 1),
     betah_l = rnorm(1, 0, 1),
-    beta0_l = rnorm(1, 0, 1),
+    beta0_l = rnorm(1, 6.5, 1),
     to = runif(1, -10, 0),
     tau = rgamma(max(fish$Age), .01, 1)
   )
@@ -383,9 +382,9 @@ inits1 <- function(){
 # need to change iterations, thinning rate and burnins to get the model to 
 # converge, it is close and I am getting good values, dave used 500000 iterations,
 # and thinning rate of 100
-ni1 <- 250  # Number of draws from posterior (for each chain)
-nt1 <- 50       # Thinning rate
-nb1 <- 15  # Number of draws to discard as burn-in
+ni1 <- 30000  # Number of draws from posterior (for each chain)
+nt1 <- 200       # Thinning rate
+nb1 <- 10000  # Number of draws to discard as burn-in
 nc1 <- 3          # Number of chains
 
 # Call jags and run the model
@@ -402,11 +401,10 @@ vb_mod_cont
 # Print a summary of the model
 print(vb_mod_cont)
 
-
-k = vb_mod_cont$BUGSoutput$sims.list$k
-betah = vb_mod_cont$BUGSoutput$sims.list$betah
-beta0 = vb_mod_cont$BUGSoutput$sims.list$beta0
-lLinf = vb_mod_cont$BUGSoutput$sims.list$lLinf
+beta0_l = vb_mod_cont$BUGSoutput$sims.list$beta0_l
+betah_l = vb_mod_cont$BUGSoutput$sims.list$betah_l
+beta0_k = vb_mod_cont$BUGSoutput$sims.list$beta0_k
+betah_k = vb_mod_cont$BUGSoutput$sims.list$betah_k
 
 # exp(lLinf)
 
