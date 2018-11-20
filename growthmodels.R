@@ -332,7 +332,7 @@ modelString1 = "
       # Likelihood
           for(i in 1:N){
             Y[i] ~ dnorm(L[i], tau[Ti[i]])
-            L[i] <- exp(lLinf[i])*(1-exp(-K[i]*(Ti[i]-to)))
+            L[i] <- lLinf[i]*(1-exp(-K[i]*(Ti[i]-to)))
             
             log(K[i]) <- beta0_k + betah_k*ha[i]
             log(lLinf[i]) <- beta0_l + betah_l*ha[i]
@@ -372,7 +372,7 @@ inits1 <- function(){
     beta0_k = rnorm(1, 0, 1),
     betah_k = rnorm(1, 0, 1),
     betah_l = rnorm(1, 0, 1),
-    beta0_l = rnorm(1, 6.5, 1),
+    beta0_l = rnorm(1, 6.5, .01),
     to = runif(1, -10, 0),
     tau = rgamma(max(fish$Age), .01, 1)
   )
@@ -394,6 +394,7 @@ vb_mod_cont <- jags(data=vb_data_cont, inits=inits1, params1, textConnection(mod
 # make sure we replace the text file with a new function definging the model above
 vb_mod_cont
 
+save(vb_mod_cont, file='covRes.rda')
 
 # data visualization biomass, still a work in progress -----  
 
