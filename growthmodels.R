@@ -382,10 +382,10 @@ inits1 <- function(){
 # need to change iterations, thinning rate and burnins to get the model to 
 # converge, it is close and I am getting good values, dave used 500000 iterations,
 # and thinning rate of 100
-ni1 <- 30000  # Number of draws from posterior (for each chain)
-nt1 <- 200       # Thinning rate
+ni1 <- 250000  # Number of draws from posterior (for each chain)
+nt1 <- 200    # Thinning rate
 nb1 <- 10000  # Number of draws to discard as burn-in
-nc1 <- 3          # Number of chains
+nc1 <- 3      # Number of chains
 
 # Call jags and run the model
 vb_mod_cont <- jags(data=vb_data_cont, inits=inits1, params1, textConnection(modelString1),
@@ -397,7 +397,6 @@ vb_mod_cont
 save(vb_mod_cont, file='covRes.rda')
 
 # data visualization biomass, still a work in progress -----  
-
 
 # Print a summary of the model
 print(vb_mod_cont)
