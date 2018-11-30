@@ -1,10 +1,7 @@
-# Front-end needs ---------------------------------------------------------
+# Front-end needs ----
 # Load necessary packages
   library(R2jags)
   library(FSA)
-
-# Clear the global environment
-  rm(list=ls())
 
 # Create function to invert logit link function
   inv.logit = function(x){
@@ -22,8 +19,8 @@
   }
   
   
-# Data manipulation -------------------------------------------------------
-# Data read
+# Data manipulation ----
+# . Fish data ----
 fish = read.csv('grasscarplengths.csv')  
   
 # Drop missing data   
@@ -39,6 +36,16 @@ fish <- merge(fish, maxes)
 
 # Calculate year for each growth increment
 fish$Year <- fish$yearc-(fish$agec-fish$Age)
+
+# . Hydrilla data -----
+# Read data
+hydrilla = read.csv('gcStockingAndHydrilla.csv')
+
+# Change year to match names in fish
+colnames(hydrilla)[1] = 'Year'
+
+# Merge hydrilla data with fish data
+biomass = merge(x = hydrilla, y = fish, by = 'Year')
 
 # VBGM by year captured -----
 # . Model string -----
@@ -107,7 +114,7 @@ fish$Year <- fish$yearc-(fish$agec-fish$Age)
   save(vb_mod, file='yearRes.rda')
   
   
-# Results of year capture model ----- 
+# . Results of year capture model ----- 
 # Load data
   load("yearRes.rda")  
   
@@ -119,8 +126,8 @@ fish$Year <- fish$yearc-(fish$agec-fish$Age)
   t0 = vb_mod$BUGSoutput$sims.list$to
   linf = vb_mod$BUGSoutput$sims.list$Linf
   
-# . Data visualization by year -----
-# .. Boxplot of k by year of capture -----
+# .. Data visualization by year -----
+# ... Boxplot of k by year of capture -----
 # Set graphical parameters
 par(mar=c(5,5,1,1))
   
@@ -147,7 +154,7 @@ axis(2, las=2, cex.axis=1.10)
 mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
 mtext(side = 2, 'K', line=3.5, cex=1.15)
 
-# .. Boxplot of linf by year of capture -----
+# ... Boxplot of linf by year of capture -----
 # Set graphical parameters
 par(mar=c(5,5,1,1))
 # Make initial boxplot to get 
@@ -170,7 +177,7 @@ mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
 mtext(side = 2, expression(paste('L'[infinity])), line=3.5, cex=1.15)
   
 
-# . Growth curves by year -----
+# ... Growth curves by year -----
 # Make a sequences of ages for the plots
 ages = seq(1, max(fish$Age), 1)
 
@@ -213,20 +220,8 @@ legend('bottomright', inset = 0.05,
        lty = 1, title = 'Year Capture', box.lty = 0)
 
 
-# Hydrilla data read and manipulation -----------------------------------------------------------------
-
-# start by merging all the data together
-hydrilla = read.csv('gcStockingAndHydrilla.csv')
-
-# Change year to match names in fish
-colnames(hydrilla)[1] = 'Year'
-
-# Merge hydrilla data with fish data
-biomass = merge(x = hydrilla, y = fish, by = 'Year')
-
-
-# Hydrilla model -----------------------------------------------------------
-
+# Hydrilla model ----
+# . Model string ----
 modelString1 = "
     model{
       # Likelihood
@@ -253,7 +248,7 @@ modelString1 = "
      }"
 
 
-  
+# . JAGS settings ----
 # Package the data for JAGS, adding new data for groups and ngroups
 vb_data_cont = list(
   Y = biomass$Length,
@@ -287,16 +282,16 @@ nt1 <- 200    # Thinning rate
 nb1 <- 10000  # Number of draws to discard as burn-in
 nc1 <- 3      # Number of chains
 
+# .. Model calibration ----
 # Call jags and run the model
 vb_mod_cont <- jags(data=vb_data_cont, inits=inits1, params1, textConnection(modelString1),
                n.chains = nc1, n.thin = nt1, n.iter = ni1, n.burnin = nb1,
                working.directory = getwd())
-# make sure we replace the text file with a new function definging the model above
-vb_mod_cont
 
+# Save the model results
 save(vb_mod_cont, file='covRes.rda')
-
-# . Data visualization for hydrilla model -----  
+# . Results ----
+# .. Data visualization for hydrilla model ----  
 # Load data
 load("covRes.rda")
   
@@ -308,8 +303,8 @@ betah_l = vb_mod_cont$BUGSoutput$sims.list$betah_l
 beta0_k = vb_mod_cont$BUGSoutput$sims.list$beta0_k
 betah_k = vb_mod_cont$BUGSoutput$sims.list$betah_k
 
-# . Plotting code for effect of hydrilla -----
-# .. Hydrilla vs L-infinity -----
+# .. Plotting code for effect of hydrilla -----
+# ... Hydrilla vs L-infinity -----
 # since all data is on range from -2 to 2
 newBiomass = seq(-2, 2, 0.1)    
 
@@ -348,7 +343,7 @@ lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
       col = 'red', lwd = 2, lty = 2)
 box()
 
-# .. Hydrilla vs k -----
+# ... Hydrilla vs k -----
 # since all data is on range from -2 to 2
 newBiomass = seq(-2, 2, 0.1)    
 
