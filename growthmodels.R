@@ -24,7 +24,7 @@
 fish = read.csv('grasscarplengths.csv')  
   
 # Drop missing data   
-fish = fish[!is.na(fish$Age) & !is.na(fish$Length), ]
+fish <- fish[!is.na(fish$Age) & !is.na(fish$Length), ]
 
 # Change name for year of capture
 names(fish)[2] <- 'yearc'
@@ -36,6 +36,11 @@ fish <- merge(fish, maxes)
 
 # Calculate year for each growth increment
 fish$Year <- fish$yearc-(fish$agec-fish$Age)
+
+# Drop highly questionable samples0
+fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
+
+
 
 # . Hydrilla data -----
 # Read data
@@ -99,10 +104,10 @@ biomass = merge(x = hydrilla, y = fish, by = 'Year')
   # need to change iterations, thinning rate and burnins to get the model to 
   # converge, it is close and I am getting good values, dave used 500000 iterations,
   # and thinning rate of 100
-  ni <- 250000 # Number of draws from posterior (for each chain)
-  nt <- 200    # Thinning rate
-  nb <- 10000  # Number of draws to discard as burn-in
-  nc <- 3      # Number of chains
+  ni <- 250000  # Number of draws from posterior (for each chain)
+  nt <- 200     # Thinning rate
+  nb <- 100000  # Number of draws to discard as burn-in
+  nc <- 3       # Number of chains
 
 # . Model calibration -----
 # Call jags and run the model
@@ -147,7 +152,7 @@ bxp(h, boxfill='gray87', outline=FALSE, ylim=c(0,.25), xaxt='n',
     pars = list(staplewex=0, whisklty=1, whiskcol="gray40", whisklwd=2,
                 boxcol='gray40', boxfill='gray87', medcol='gray40')
     )
-
+box()
 # Add axes and axis labels
 axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
 axis(2, las=2, cex.axis=1.10)
@@ -171,6 +176,7 @@ bxp(h, boxfill='gray87', outline=FALSE, ylim=c(0,3000), xaxt='n',
     pars = list(staplewex=0, whisklty=1, whiskcol="gray40", whisklwd=2,
                 boxcol='gray40', boxfill='gray87', medcol='gray40')
     )
+box()
 axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
 axis(2, las=2, cex.axis=1.10)
 mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
@@ -198,7 +204,10 @@ plot(fish$Age, fish$Length,
      ylab='',
      xlim=c(0, 25),
      axes = FALSE,
-     pch = 21, bg='gray87', col='gray87', main='')
+     pch = 21,
+     bg=c("black", "red", 'blue', 'green', 'yellow')[as.factor(fish$yearc)],
+     col=c("black", "red", 'blue', 'green', 'yellow')[as.factor(fish$yearc)],
+     main='')
 
 # Add the growth curves  
 lines(x = ages, y = first, col = 'black')
@@ -380,4 +389,3 @@ lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = low),
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
       col = 'red', lwd = 2, lty = 2)
 box()
-
