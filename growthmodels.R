@@ -215,10 +215,10 @@ for(i in 1:nrow(res2)){
   # need to change iterations, thinning rate and burnins to get the model to 
   # converge, it is close and I am getting good values, dave used 500000 iterations,
   # and thinning rate of 100
-  ni <- 2500  # Number of draws from posterior (for each chain)
-  nt <- 500       # Thinning rate
-  nb <- 150  # Number of draws to discard as burn-in
-  nc <- 3          # Number of chains
+  ni <- 250000 # Number of draws from posterior (for each chain)
+  nt <- 200    # Thinning rate
+  nb <- 10000  # Number of draws to discard as burn-in
+  nc <- 3      # Number of chains
 
 # Call jags and run the model
   vb_mod <- jags(data=vb_data, inits=inits, params, textConnection(modelString),
@@ -226,6 +226,7 @@ for(i in 1:nrow(res2)){
     working.directory = getwd())
 # make sure we replace the text file with a new function definging the model above
 
+  save(vb_mod, file='yearRes.rda')
   
 # Results of year capture model -----  
 # Print a summary of the model
@@ -239,10 +240,49 @@ for(i in 1:nrow(res2)){
 
 
 # visualization of the data (year capture) -------------------------------------------------------
-
-boxplot(k, col = 'gray87', xlab = 'year', ylab = 'k') 
+# Boxplot of k by year of capture
+  # Set graphical parameters
+  par(mar=c(5,5,1,1))
+  # Make initial boxplot to get 
+  # boxplot object, saved to h
+  h=boxplot(k, plot=FALSE)
+  # Replace whisker length with the
+  # 95% Confidence intervals
+  h$stats[c(1,5), ] = apply(k, 2, quantile, probs=c(0.025, 0.975))[c(1,2), ]
+  # Re-plot the boxplot with the new whiskers 
+  # and add graphical parameters to make the
+  # plot prettier
+  bxp(h, boxfill='gray87', outline=FALSE, ylim=c(0,.25), xaxt='n',
+      yaxt='n', plot=FALSE, boxwex=.5,
+      pars = list(staplewex=0, whisklty=1, whiskcol="gray40", whisklwd=2,
+                  boxcol='gray40', boxfill='gray87', medcol='gray40')
+      )
+  axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
+  axis(2, las=2, cex.axis=1.10)
+  mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
+  mtext(side = 2, 'K', line=3.5, cex=1.15)
   
-boxplot(linf, col = 'gray87', xlab = 'year', ylab = 'linf') 
+# Boxplot of linf by year of capture
+  # Set graphical parameters
+  par(mar=c(5,5,1,1))
+  # Make initial boxplot to get 
+  # boxplot object, saved to h
+  h=boxplot(linf, plot=FALSE)
+  # Replace whisker length with the
+  # 95% Confidence intervals
+  h$stats[c(1,5), ] = apply(linf, 2, quantile, probs=c(0.025, 0.975))[c(1,2), ]
+  # Re-plot the boxplot with the new whiskers 
+  # and add graphical parameters to make the
+  # plot prettier
+  bxp(h, boxfill='gray87', outline=FALSE, ylim=c(0,3000), xaxt='n',
+            yaxt='n', plot=FALSE, boxwex=.5,
+      pars = list(staplewex=0, whisklty=1, whiskcol="gray40", whisklwd=2,
+                  boxcol='gray40', boxfill='gray87', medcol='gray40')
+      )
+  axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
+  axis(2, las=2, cex.axis=1.10)
+  mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
+  mtext(side = 2, expression(paste('L'[infinity])), line=3.5, cex=1.15)
   
 # show the different factor levels within the data
 fish$YearF = as.numeric(as.factor(fish$Year)) 
@@ -255,7 +295,6 @@ second = mean(linf[,2]) * (1-exp(-mean(k[,2])*(ages-mean(t0[,2]))))
 third = mean(linf[,3]) * (1-exp(-mean(k[,3])*(ages-mean(t0[,3]))))
 fourth = mean(linf[,4]) * (1-exp(-mean(k[,4])*(ages-mean(t0[,4]))))
 fifth = mean(linf[,5]) * (1-exp(-mean(k[,5])*(ages-mean(t0[,5]))))
-  
   
 # now plot the results
 # Make the posterior predictive plot, just the raw data, no axes
@@ -382,7 +421,7 @@ inits1 <- function(){
 # need to change iterations, thinning rate and burnins to get the model to 
 # converge, it is close and I am getting good values, dave used 500000 iterations,
 # and thinning rate of 100
-ni1 <- 250000  # Number of draws from posterior (for each chain)
+ni1 <- 250000 # Number of draws from posterior (for each chain)
 nt1 <- 200    # Thinning rate
 nb1 <- 10000  # Number of draws to discard as burn-in
 nc1 <- 3      # Number of chains
