@@ -238,9 +238,11 @@ for(i in 1:nrow(res2)){
   linf = vb_mod$BUGSoutput$sims.list$Linf
   
 
-
-# visualization of the data (year capture) -------------------------------------------------------
-# Boxplot of k by year of capture
+# . visualization of the data (year capture) -------------------------------------------------------
+# Load data
+  load("yearRes.rda")
+  
+# .. Boxplot of k by year of capture -----
   # Set graphical parameters
   par(mar=c(5,5,1,1))
   # Make initial boxplot to get 
@@ -262,7 +264,7 @@ for(i in 1:nrow(res2)){
   mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
   mtext(side = 2, 'K', line=3.5, cex=1.15)
   
-# Boxplot of linf by year of capture
+# .. Boxplot of linf by year of capture -----
   # Set graphical parameters
   par(mar=c(5,5,1,1))
   # Make initial boxplot to get 
@@ -435,8 +437,10 @@ vb_mod_cont
 
 save(vb_mod_cont, file='covRes.rda')
 
-# data visualization biomass, still a work in progress -----  
-
+# .data visualization biomass, still a work in progress -----  
+# Load data
+load("covRes.rda")
+  
 # Print a summary of the model
 print(vb_mod_cont)
 
@@ -445,56 +449,81 @@ betah_l = vb_mod_cont$BUGSoutput$sims.list$betah_l
 beta0_k = vb_mod_cont$BUGSoutput$sims.list$beta0_k
 betah_k = vb_mod_cont$BUGSoutput$sims.list$betah_k
 
-# exp(lLinf)
-
-
-# vb_mod_cont$BUGSoutput$sims.list
-
-
-
-# plotting code that I haven't looked at yet becasue the model isn't working
-# next step is to tear this apart and determine best way to plot continuous 
-# variable (hydrilla biomass) model
-
-
-
+# . Plotting code for effect of hydrilla -----
+# .. Hydrilla biomass on grasscarp L-infinity -----
 # since all data is on range from -2 to 2
 newBiomass = seq(-2, 2, 0.1)    
 
 # make an empty matrix to then fill with data later
-preds = matrix(NA, nrow = length(beta0), ncol = length(newBiomass))
-
+preds = matrix(NA, nrow = length(beta0_l), ncol = length(newBiomass))
+# Fill the matrix with predicted L-inf
+# based on the linear predictor that
+# uses hydrilla biomass
 for(i in 1:nrow(preds)){
   for(t in 1:length(newBiomass)){
-    preds[i, t] = (beta0[i] + betah[i]*newBiomass[t])
+    preds[i, t] = (beta0_l[i] + betah_l[i]*newBiomass[t])
   }
 }
 preds = exp(preds)
 
 
-
+# Plot the first prediction to get a plotting window set up
 par(mar = c(5,5,1,1))
 plot(x = newBiomass, y = preds[1, ], type = 'l',
-    # col = rgb(0.4, 0.4, 0.4, 0.05),
-     xlab = "Biomass", ylab = "k",
-     yaxt = 'n', ylim = c(0,1))  
+     col = rgb(0.4, 0.4, 0.4, 0.05),
+     xlab = "Biomass", ylab = expression(paste('L'[infinity])),
+     yaxt = 'n', ylim = c(1000,1200))  
 axis(2, las = 2)
-
 # now we add the loop for the rest of the data
-
 for (i in 2:nrow(preds)){
   lines(x = newBiomass, y = preds[i, ],
         col = rgb(0.4, 0.4, 0.4, 0.05))
 }
 
 # get the mean and 95% CRIs, defined the upper and lower CRI functions above
-
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = mean),
       col = 'blue', lwd = 2)
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = low),
       col = 'red', lwd = 2, lty = 2)
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
       col = 'red', lwd = 2, lty = 2)
+box()
 
+# .. Hydrilla biomass effect on grasscarp k -----
+# since all data is on range from -2 to 2
+newBiomass = seq(-2, 2, 0.1)    
 
+# make an empty matrix to then fill with data later
+preds = matrix(NA, nrow = length(beta0_k), ncol = length(newBiomass))
+# Fill the matrix with predicted L-inf
+# based on the linear predictor that
+# uses hydrilla biomass
+for(i in 1:nrow(preds)){
+  for(t in 1:length(newBiomass)){
+    preds[i, t] = (beta0_k[i] + betah_k[i]*newBiomass[t])
+  }
+}
+preds = exp(preds)
+
+# Plot the first prediction to get a plotting window set up
+par(mar = c(5,5,1,1))
+plot(x = newBiomass, y = preds[1, ], type = 'l',
+     col = rgb(0.4, 0.4, 0.4, 0.05),
+     xlab = "Biomass", ylab = 'K',
+     yaxt = 'n', ylim = c(0.1, 0.3))  
+axis(2, las = 2)
+# now we add the loop for the rest of the data
+for (i in 2:nrow(preds)){
+  lines(x = newBiomass, y = preds[i, ],
+        col = rgb(0.4, 0.4, 0.4, 0.05))
+}
+
+# get the mean and 95% CRIs, defined the upper and lower CRI functions above
+lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = mean),
+      col = 'blue', lwd = 2)
+lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = low),
+      col = 'red', lwd = 2, lty = 2)
+lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
+      col = 'red', lwd = 2, lty = 2)
+box()
 
