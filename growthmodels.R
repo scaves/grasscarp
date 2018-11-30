@@ -24,146 +24,24 @@
   
 # Data manipulation -------------------------------------------------------
 # Data read
-  fish = read.csv('grasscarplengths.csv')  
+fish = read.csv('grasscarplengths.csv')  
   
 # Drop missing data   
-  fish = fish[!is.na(fish$Age) & !is.na(fish$Length), ]
-head(fish)
-tail(fish)  
-nrow(fish)
+fish = fish[!is.na(fish$Age) & !is.na(fish$Length), ]
 
+# Change name for year of capture
 names(fish)[2] <- 'yearc'
 
-
+# Get age of capture by aggregation and merge
 maxes <- aggregate(Age~fishID, fish, max)
 names(maxes)[2] <- 'agec'
 fish <- merge(fish, maxes)
 
+# Calculate year for each growth increment
 fish$Year <- fish$yearc-(fish$agec-fish$Age)
 
-
-# basic von bert ------------------------------------------------------------------
-
-
-# lets makle a von bert model, and then let it converge for us
-vb = nls(
-  formula = Length~Linf*(1-exp(-k*(Age-t0))),
-  data = fish,
-  start = list(Linf = 1250, k = 0.2, t0 = 0), 
-  trace = TRUE
-)
-# now we summarize the model
-summary(vb)
-# dont report significances, just means and std errors (which are extremely tight
-# due to the shear size of the dataset)
-
-# max length of a fish
-max(fish$Length)
-# make a table of the results, the model coeeficients
-res = data.frame(summary(vb)$coefficients)
-res
-# make a sequence from min to max age, make sure to get rid of the na in dataset
-ages = seq(from = min(fish$Age, na.rm = TRUE), 
-           to = max(fish$Age, na.rm = TRUE), 
-           by = 1)
-ages
-
-# make some predictions, using brackets to get values from object res, and plug 
-# in new ages just made in the sequence, remake the von bert
-
-meanPred = res[1,1]*(1-exp(-res[2,1]*(ages-res[3,1])))
-meanPred
-
-uPred = (res[1,1]+res[1,2]*1.96)*(1-exp(-(res[2,1]+res[2,2]*1.96)*(ages-(res[3,1]+res[3,2]*1.96))))
-lPred = (res[1,1]-res[1,2]*1.96)*(1-exp(-(res[2,1]-res[2,2]*1.96)*(ages-(res[3,1]-res[3,2]*1.96))))
-
-
-# quick check of the values, plot them
-plot(x = fish$Age,
-     y = fish$Length,
-     pch = 21,
-     bg = rgb(0.5, 0.5, 0.5, 0.15),
-     col = rgb( 0.5, 0.5, 0.5, 0.15),
-     xlim = c(0,23),
-     ylim = c(0,1400),
-     yaxt = "n",
-     xlab = 'Age (Years)',
-     ylab = 'Length (mm)',
-     cex.axis = 1.10,
-     cex.lab = 1.15
-)
-axis(side = 2, las = 2)
-
-lines(x = ages, y = meanPred, lty = 1, col = 'red', lwd = 2) 
-
-# add the confidence intervals
-lines(x = ages, y = lPred, lty = 2, col = 'blue', lwd = 2) 
-lines(x = ages, y = uPred, lty = 2, col = 'blue', lwd = 2) 
-# next week we will bootstrap for confidence intervals, to account for more noise
-
-
-
-
-# bootstrap fitting ------------------------------------------------------------------
-
-# need to make a blank list in order to fill it with the loop
-nruns = 1000
-out = vector(mode = 'list', length = nruns)
-
-# make the loop
-for(i in 1:nruns){
-  # make a subset of the data to test each time
-  subdat = fish[sample(nrow(fish), 100, replace = F), ]
-  
-  # remaking the model, just to have it in this section
-  
-  
-  vb = nls(
-    formula = Length~Linf*(1-exp(-k*(Age-t0))),
-    data = subdat,
-    start = list(Linf = 1250, k = 0.2, t0 = 0), 
-    trace = FALSE # dont need to see what is happening everytime like above
-  )
-  
-  # make a results table for the output
-  out[[i]] = data.frame(summary(vb)$coefficients)[,1]
-  
-}
-# we made the ages sequence earlier, print it to refamiliarize yourself with it
-
-ages
-
-# plot the raw data
-plot(x = fish$Age,
-     y = fish$Length,
-     pch = 21,
-     bg = rgb(0.5, 0.5, 0.5, 0.15),
-     col = rgb( 0.5, 0.5, 0.5, 0.15),
-     xlim = c(0,23),
-     ylim = c(0,1400),
-     yaxt = "n",
-     xlab = 'Age (Years)',
-     ylab = 'Length (mm)',
-     cex.axis = 1.10,
-     cex.lab = 1.15
-)
-axis(side = 2, las = 2)
-
-# make a second results table, use the function rbind (row bind) to the vector out
-res2 = do.call(rbind, out)
-res2
-# this just takes the vector a puts it all together
-
-# lets make a loop to plot the lines as well so we dont have to type it out 100 times
-for(i in 1:nrow(res2)){
-  Pred = res2[i,1]*(1-exp(-res2[i,2]*(ages-res2[i,3])))
-  
-  lines(ages, Pred, col = rgb(0.25, 0.25, 0.25, 0.05))
-  
-}
-
-
-# VBGM without site effects, between year captured -----------------------------------
+# VBGM by year captured -----
+# . Model string -----
   modelString = "
     model{
       # Likelihood
@@ -185,9 +63,8 @@ for(i in 1:nrow(res2)){
           tau[t] ~ dgamma(0.001, 0.0001)
         }
     }"
-  # writeLines(modelString, con='vb_model.txt') 
-  # take this line out and dont write a text file so we arent saving to the drive
 
+# . JAGS settings -----
 # Package the data for JAGS, adding new data for groups and ngroups
   vb_data = list(
     Y = fish$Length,
@@ -220,15 +97,20 @@ for(i in 1:nrow(res2)){
   nb <- 10000  # Number of draws to discard as burn-in
   nc <- 3      # Number of chains
 
+# . Model calibration -----
 # Call jags and run the model
   vb_mod <- jags(data=vb_data, inits=inits, params, textConnection(modelString),
     n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb,
     working.directory = getwd())
-# make sure we replace the text file with a new function definging the model above
-
+  
+# Save the model object to a file
   save(vb_mod, file='yearRes.rda')
   
-# Results of year capture model -----  
+  
+# Results of year capture model ----- 
+# Load data
+  load("yearRes.rda")  
+  
 # Print a summary of the model
   print(vb_mod)
   
@@ -237,136 +119,113 @@ for(i in 1:nrow(res2)){
   t0 = vb_mod$BUGSoutput$sims.list$to
   linf = vb_mod$BUGSoutput$sims.list$Linf
   
-
-# . visualization of the data (year capture) -------------------------------------------------------
-# Load data
-  load("yearRes.rda")
-  
+# . Data visualization by year -----
 # .. Boxplot of k by year of capture -----
-  # Set graphical parameters
-  par(mar=c(5,5,1,1))
-  # Make initial boxplot to get 
-  # boxplot object, saved to h
-  h=boxplot(k, plot=FALSE)
-  # Replace whisker length with the
-  # 95% Confidence intervals
-  h$stats[c(1,5), ] = apply(k, 2, quantile, probs=c(0.025, 0.975))[c(1,2), ]
-  # Re-plot the boxplot with the new whiskers 
-  # and add graphical parameters to make the
-  # plot prettier
-  bxp(h, boxfill='gray87', outline=FALSE, ylim=c(0,.25), xaxt='n',
-      yaxt='n', plot=FALSE, boxwex=.5,
-      pars = list(staplewex=0, whisklty=1, whiskcol="gray40", whisklwd=2,
-                  boxcol='gray40', boxfill='gray87', medcol='gray40')
-      )
-  axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
-  axis(2, las=2, cex.axis=1.10)
-  mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
-  mtext(side = 2, 'K', line=3.5, cex=1.15)
+# Set graphical parameters
+par(mar=c(5,5,1,1))
   
-# .. Boxplot of linf by year of capture -----
-  # Set graphical parameters
-  par(mar=c(5,5,1,1))
-  # Make initial boxplot to get 
-  # boxplot object, saved to h
-  h=boxplot(linf, plot=FALSE)
-  # Replace whisker length with the
-  # 95% Confidence intervals
-  h$stats[c(1,5), ] = apply(linf, 2, quantile, probs=c(0.025, 0.975))[c(1,2), ]
-  # Re-plot the boxplot with the new whiskers 
-  # and add graphical parameters to make the
-  # plot prettier
-  bxp(h, boxfill='gray87', outline=FALSE, ylim=c(0,3000), xaxt='n',
-            yaxt='n', plot=FALSE, boxwex=.5,
-      pars = list(staplewex=0, whisklty=1, whiskcol="gray40", whisklwd=2,
-                  boxcol='gray40', boxfill='gray87', medcol='gray40')
-      )
-  axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
-  axis(2, las=2, cex.axis=1.10)
-  mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
-  mtext(side = 2, expression(paste('L'[infinity])), line=3.5, cex=1.15)
-  
-# show the different factor levels within the data
-fish$YearF = as.numeric(as.factor(fish$Year)) 
+# Make initial boxplot to get 
+# boxplot object, saved to h
+h=boxplot(k, plot=FALSE)
 
-# make a sequences of ages for the plots
+# Replace whisker length with the
+# 95% Confidence intervals
+h$stats[c(1,5), ] = apply(k, 2, quantile, probs=c(0.025, 0.975))[c(1,2), ]
+
+# Re-plot the boxplot with the new whiskers 
+# and add graphical parameters to make the
+# plot prettier
+bxp(h, boxfill='gray87', outline=FALSE, ylim=c(0,.25), xaxt='n',
+    yaxt='n', plot=FALSE, boxwex=.5,
+    pars = list(staplewex=0, whisklty=1, whiskcol="gray40", whisklwd=2,
+                boxcol='gray40', boxfill='gray87', medcol='gray40')
+    )
+
+# Add axes and axis labels
+axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
+axis(2, las=2, cex.axis=1.10)
+mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
+mtext(side = 2, 'K', line=3.5, cex=1.15)
+
+# .. Boxplot of linf by year of capture -----
+# Set graphical parameters
+par(mar=c(5,5,1,1))
+# Make initial boxplot to get 
+# boxplot object, saved to h
+h=boxplot(linf, plot=FALSE)
+# Replace whisker length with the
+# 95% Confidence intervals
+h$stats[c(1,5), ] = apply(linf, 2, quantile, probs=c(0.025, 0.975))[c(1,2), ]
+# Re-plot the boxplot with the new whiskers 
+# and add graphical parameters to make the
+# plot prettier
+bxp(h, boxfill='gray87', outline=FALSE, ylim=c(0,3000), xaxt='n',
+          yaxt='n', plot=FALSE, boxwex=.5,
+    pars = list(staplewex=0, whisklty=1, whiskcol="gray40", whisklwd=2,
+                boxcol='gray40', boxfill='gray87', medcol='gray40')
+    )
+axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
+axis(2, las=2, cex.axis=1.10)
+mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
+mtext(side = 2, expression(paste('L'[infinity])), line=3.5, cex=1.15)
+  
+
+# . Growth curves by year -----
+# Make a sequences of ages for the plots
 ages = seq(1, max(fish$Age), 1)
-# take the posterior distributions and create the vbgm for each year
+
+# Posterior predictive vbgm for each year
 first = mean(linf[,1]) * (1-exp(-mean(k[,1])*(ages-mean(t0[,1]))))
 second = mean(linf[,2]) * (1-exp(-mean(k[,2])*(ages-mean(t0[,2]))))
 third = mean(linf[,3]) * (1-exp(-mean(k[,3])*(ages-mean(t0[,3]))))
 fourth = mean(linf[,4]) * (1-exp(-mean(k[,4])*(ages-mean(t0[,4]))))
 fifth = mean(linf[,5]) * (1-exp(-mean(k[,5])*(ages-mean(t0[,5]))))
   
-# now plot the results
-# Make the posterior predictive plot, just the raw data, no axes
-      par(mar=c(4,4,1,1))
-      plot(fish$Age, fish$Length, 
-           ylim=c(0, 1500),
-           yaxt='n',
-           xlab='',
-           ylab='',
-           xlim=c(0, 25),
-           axes = FALSE,
-           pch = 21, bg='gray87', col='gray87', main='')
-# add the growth curves  
+# Plot the results
+# First, the raw data with no axes
+par(mar=c(4,4,1,1))
+plot(fish$Age, fish$Length, 
+     ylim=c(0, 1500),
+     yaxt='n',
+     xlab='',
+     ylab='',
+     xlim=c(0, 25),
+     axes = FALSE,
+     pch = 21, bg='gray87', col='gray87', main='')
+
+# Add the growth curves  
 lines(x = ages, y = first, col = 'black')
 lines(x = ages, y = second, col = 'red')
 lines(x = ages, y = third, col = 'blue')
 lines(x = ages, y = fourth, col = 'green')
 lines(x = ages, y = fifth, col = 'yellow')
 
-# add in the axes and labels
-     axis(1, pos=0)
-     axis(2, pos=0, las=2)  
-     mtext(expression(paste('Age (years)')),
-           side=1, line=2.5)
-     mtext('Total length (mm)', side=2, line=2.5) 
-legend('bottomright', inset = 0.05,legend=c("2006", "2007", '2009', '2010', '2017'),
-       col=c("black", "red", 'blue', 'green', 'yellow'), lty = 1, title = 'Year Capture',
-       box.lty = 0)
-
-# figure out the max age of fish in each given year
-max(fish$Age[fish$Year == 2006])
-max(fish$Age[fish$Year == 2007])
-max(fish$Age[fish$Year == 2009])
-max(fish$Age[fish$Year == 2010])
-max(fish$Age[fish$Year == 2017])
-
-# make the upper confidence interval
-firstup = up(linf[,1]) * (1-exp(-up(k[,1])*(ages-up(t0[,1]))))
-secondup = up(linf[,2]) * (1-exp(-up(k[,2])*(ages-up(t0[,2]))))
-thirdup = up(linf[,3]) * (1-exp(-up(k[,3])*(ages-up(t0[,3]))))
-fourthup = up(linf[,4]) * (1-exp(-up(k[,4])*(ages-up(t0[,4]))))
-fifthup = up(linf[,5]) * (1-exp(-up(k[,5])*(ages-up(t0[,5]))))
-# make the lower confidence interval
-firstlow = low(linf[,1]) * (1-exp(-low(k[,1])*(ages-low(t0[,1]))))
-secondlow = low(linf[,2]) * (1-exp(-low(k[,2])*(ages-low(t0[,2]))))
-thirdlow = low(linf[,3]) * (1-exp(-low(k[,3])*(ages-low(t0[,3]))))
-fourthlow = low(linf[,4]) * (1-exp(-low(k[,4])*(ages-low(t0[,4]))))
-fifthlow = low(linf[,5]) * (1-exp(-low(k[,5])*(ages-low(t0[,5]))))
+# Add axes and labels
+axis(1, pos=0)
+axis(2, pos=0, las=2)  
+mtext(expression(paste('Age (years)')), side=1, line=2.5)
+mtext('Total length (mm)', side=2, line=2.5) 
+ 
+# Add legend
+legend('bottomright', inset = 0.05,
+       legend=c("2006", "2007", '2009', '2010', '2017'),
+       col=c("black", "red", 'blue', 'green', 'yellow'),
+       lty = 1, title = 'Year Capture', box.lty = 0)
 
 
-# Biomass data read and manipulation -----------------------------------------------------------------
+# Hydrilla data read and manipulation -----------------------------------------------------------------
 
 # start by merging all the data together
 hydrilla = read.csv('gcStockingAndHydrilla.csv')
 
-hydrilla
-names(hydrilla)
-names(fish)
+# Change year to match names in fish
 colnames(hydrilla)[1] = 'Year'
-names(hydrilla)
 
+# Merge hydrilla data with fish data
 biomass = merge(x = hydrilla, y = fish, by = 'Year')
-head(biomass)
-tail(biomass)
 
 
-# now we have to add biomass as a continuous variable of hydrilla to the model
-
-
-# Biomass model -----------------------------------------------------------
+# Hydrilla model -----------------------------------------------------------
 
 modelString1 = "
     model{
@@ -437,7 +296,7 @@ vb_mod_cont
 
 save(vb_mod_cont, file='covRes.rda')
 
-# .data visualization biomass, still a work in progress -----  
+# . Data visualization for hydrilla model -----  
 # Load data
 load("covRes.rda")
   
@@ -450,7 +309,7 @@ beta0_k = vb_mod_cont$BUGSoutput$sims.list$beta0_k
 betah_k = vb_mod_cont$BUGSoutput$sims.list$betah_k
 
 # . Plotting code for effect of hydrilla -----
-# .. Hydrilla biomass on grasscarp L-infinity -----
+# .. Hydrilla vs L-infinity -----
 # since all data is on range from -2 to 2
 newBiomass = seq(-2, 2, 0.1)    
 
@@ -489,7 +348,7 @@ lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
       col = 'red', lwd = 2, lty = 2)
 box()
 
-# .. Hydrilla biomass effect on grasscarp k -----
+# .. Hydrilla vs k -----
 # since all data is on range from -2 to 2
 newBiomass = seq(-2, 2, 0.1)    
 
