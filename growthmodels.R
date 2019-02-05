@@ -156,7 +156,7 @@ box()
 # Add axes and axis labels
 axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
 axis(2, las=2, cex.axis=1.10)
-mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
+mtext(side = 1, 'Year of Collection', line=3.5, cex=1.15)
 mtext(side = 2, 'K', line=3.5, cex=1.15)
 
 # ... Boxplot of linf by year of capture -----
@@ -179,7 +179,7 @@ bxp(h, boxfill='gray87', outline=FALSE, ylim=c(0,3000), xaxt='n',
 box()
 axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
 axis(2, las=2, cex.axis=1.10)
-mtext(side = 1, 'Year of collection', line=3.5, cex=1.15)
+mtext(side = 1, 'Year of Collection', line=3.5, cex=1.15)
 mtext(side = 2, expression(paste('L'[infinity])), line=3.5, cex=1.15)
   
 
@@ -205,16 +205,16 @@ plot(fish$Age, fish$Length,
      xlim=c(0, 25),
      axes = FALSE,
      pch = 21,
-     bg=c("black", "red", 'blue', 'green', 'yellow')[as.factor(fish$yearc)],
-     col=c("black", "red", 'blue', 'green', 'yellow')[as.factor(fish$yearc)],
+     bg=c("black", "red", 'blue', 'green', 'orange')[as.factor(fish$yearc)],
+     col=c("black", "red", 'blue', 'green', 'orange')[as.factor(fish$yearc)],
      main='')
 
 # Add the growth curves  
-lines(x = ages, y = first, col = 'black')
-lines(x = ages, y = second, col = 'red')
-lines(x = ages, y = third, col = 'blue')
-lines(x = ages, y = fourth, col = 'green')
-lines(x = ages, y = fifth, col = 'yellow')
+lines(x = ages, y = first, col = 'black', lwd = 2)
+lines(x = ages, y = second, col = 'red', lwd = 2)
+lines(x = ages, y = third, col = 'blue', lwd = 2)
+lines(x = ages, y = fourth, col = 'green', lwd = 2)
+lines(x = ages, y = fifth, col = 'orange', lwd = 2)
 
 # Add axes and labels
 axis(1, pos=0)
@@ -225,8 +225,8 @@ mtext('Total length (mm)', side=2, line=2.5)
 # Add legend
 legend('bottomright', inset = 0.05,
        legend=c("2006", "2007", '2009', '2010', '2017'),
-       col=c("black", "red", 'blue', 'green', 'yellow'),
-       lty = 1, title = 'Year Capture', box.lty = 0)
+       col=c("black", "red", 'blue', 'green', 'orange'),
+       lty = 1, title = 'Year Capture', box.lty = 0, lwd = 2)
 
 
 # Hydrilla model ----
@@ -313,7 +313,7 @@ beta0_k = vb_mod_cont$BUGSoutput$sims.list$beta0_k
 betah_k = vb_mod_cont$BUGSoutput$sims.list$betah_k
 
 # .. Plotting code for effect of hydrilla -----
-# ... Hydrilla vs L-infinity -----
+# ... Hdrilla vs L-infinity -----
 # since all data is on range from -2 to 2
 newBiomass = seq(-2, 2, 0.1)    
 
@@ -334,7 +334,7 @@ preds = exp(preds)
 par(mar = c(5,5,1,1))
 plot(x = newBiomass, y = preds[1, ], type = 'l',
      col = rgb(0.4, 0.4, 0.4, 0.05),
-     xlab = "Biomass", ylab = expression(paste('L'[infinity])),
+     xlab = "Standardized Surface Hectares", ylab = expression(paste('L'[infinity])),
      yaxt = 'n', ylim = c(1000,1200))  
 axis(2, las = 2)
 # now we add the loop for the rest of the data
@@ -372,7 +372,7 @@ preds = exp(preds)
 par(mar = c(5,5,1,1))
 plot(x = newBiomass, y = preds[1, ], type = 'l',
      col = rgb(0.4, 0.4, 0.4, 0.05),
-     xlab = "Biomass", ylab = 'K',
+     xlab = "Standardized Surface Hectares", ylab = 'K',
      yaxt = 'n', ylim = c(0.1, 0.3))  
 axis(2, las = 2)
 # now we add the loop for the rest of the data
