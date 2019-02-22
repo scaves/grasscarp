@@ -226,7 +226,7 @@ mtext('Total length (mm)', side=2, line=2.5)
 legend('bottomright', inset = 0.05,
        legend=c("2006", "2007", '2009', '2010', '2017'),
        col=c("black", "red", 'blue', 'green', 'orange'),
-       lty = 1, title = 'Year Capture', box.lty = 0, lwd = 2)
+       lty = 1, title = 'Year of Capture', box.lty = 0, lwd = 2)
 
 
 # Hydrilla model ----
@@ -373,6 +373,47 @@ par(mar = c(5,5,1,1))
 plot(x = newBiomass, y = preds[1, ], type = 'l',
      col = rgb(0.4, 0.4, 0.4, 0.05),
      xlab = "Standardized Surface Hectares", ylab = 'K',
+     yaxt = 'n', ylim = c(0.1, 0.3))  
+axis(2, las = 2)
+# now we add the loop for the rest of the data
+for (i in 2:nrow(preds)){
+  lines(x = newBiomass, y = preds[i, ],
+        col = rgb(0.4, 0.4, 0.4, 0.05))
+}
+
+# get the mean and 95% CRIs, defined the upper and lower CRI functions above
+lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = mean),
+      col = 'blue', lwd = 2)
+lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = low),
+      col = 'red', lwd = 2, lty = 2)
+lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
+      col = 'red', lwd = 2, lty = 2)
+box()
+
+
+
+# ... Hydrilla vs M -----
+# since all data is on range from -2 to 2
+newBiomass = seq(-2, 2, 0.1)    
+
+# make an empty matrix to then fill with data later
+preds = matrix(NA, nrow = length(beta0_k), ncol = length(newBiomass))
+# Fill the matrix with predicted L-inf
+# based on the linear predictor that
+# uses hydrilla biomass
+for(i in 1:nrow(preds)){
+  for(t in 1:length(newBiomass)){
+    preds[i, t] = (beta0_k[i] + betah_k[i]*newBiomass[t])
+  }
+}
+preds = exp(preds)
+preds <- apply(preds, 2, FUN='*', 1.5)
+
+# Plot the first prediction to get a plotting window set up
+par(mar = c(5,5,1,1))
+plot(x = newBiomass, y = preds[1, ], type = 'l',
+     col = rgb(0.4, 0.4, 0.4, 0.05),
+     xlab = "Standardized Surface Hectares", ylab = 'M',
      yaxt = 'n', ylim = c(0.1, 0.3))  
 axis(2, las = 2)
 # now we add the loop for the rest of the data
