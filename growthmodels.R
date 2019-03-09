@@ -1,8 +1,9 @@
 # Front-end needs ----
-# Load necessary packages
+# . Load necessary packages ----
   library(R2jags)
   library(FSA)
 
+# . Function definition ----
 # Create function to invert logit link function
   inv.logit = function(x){
     exp(x)/(1+exp(x))
@@ -18,6 +19,16 @@
     quantile(x, probs=c(0.975))
   }
   
+# Scale new values of variable
+# based on a sample
+  nscale <- function(xn, xo){
+    (xn - mean(xo) ) / sd(xo)
+  }
+  
+# Unscale
+  unscale <- function(x, y){
+    x * sd(y) + mean(y)
+  }
   
 # Data manipulation ----
 # . Fish data ----
@@ -124,7 +135,7 @@ biomass = merge(x = hydrilla, y = fish, by = 'Year')
   load("yearRes.rda")  
   
 # Print a summary of the model
-  print(vb_mod)
+  #print(vb_mod, digits=3)
   
 # Get posterior distributions for parameter estimates
   k = vb_mod$BUGSoutput$sims.list$K
@@ -132,57 +143,125 @@ biomass = merge(x = hydrilla, y = fish, by = 'Year')
   linf = vb_mod$BUGSoutput$sims.list$Linf
   
 # .. Data visualization by year -----
-# ... Boxplot of k by year of capture -----
-# Set graphical parameters
-par(mar=c(5,5,1,1))
+# ... Boxplots of posteriors by year -----
+# Set up an image file
+tiff(filename='Figure1.tiff',
+     width = 1500,
+     height = 2000,
+     res = 500,
+     pointsize = 8,
+     units = 'px'
+     )
+
+# Set graphical parameters  
+par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
+
+# Linf by year of capture 
+  # Make initial boxplot to get 
+  # boxplot object, saved to h
+    h <- boxplot(linf, plot=FALSE)
+  # Replace whisker length with the
+  # 95% Confidence intervals
+    h$stats[c(1,5), ] <- 
+      apply(linf, 2, quantile, probs=c(0.025, 0.975))[c(1,2), ]
+  # Re-plot the boxplot with the new whiskers 
+  # and add graphical parameters to make the
+  # plot prettier
+    bxp(h, boxfill='gray87',
+        outline=FALSE,
+        ylim=c(0,3000),
+        xaxt='n', yaxt='n',
+        plot=FALSE,
+        boxwex=.5, 
+        pars = list(
+          staplewex=0,
+          staplecol='gray40',
+          whisklty=1,
+          whiskcol="gray40",
+          whisklwd=1,
+          boxcol='gray40',
+          boxfill='gray87',
+          medcol='gray40',
+          medlwd=1
+          )
+        )
+    box()
+  axis(1, labels = FALSE, tick = TRUE)
+  axis(2, las = 2)
+  mtext(side = 2, expression(paste('L'[infinity])), line=3.5)
+
+  # K by year of capture
+  # Make initial boxplot to get 
+  # boxplot object, saved to h
+    h=boxplot(k, plot=FALSE)
+  # Replace whisker length with
+  # 95% Confidence intervals
+    h$stats[c(1,5), ] <- 
+      apply(k, 2, quantile, probs=c(0.025, 0.975))[c(1,2), ]
+  # Re-plot the boxplot with the new whiskers 
+  # and add graphical parameters to make the
+  # plot prettier
+    bxp(h, boxfill='gray87',
+        outline=FALSE,
+        ylim=c(0,.25),
+        xaxt='n', yaxt='n',
+        plot=FALSE, 
+        pars = list(
+          staplewex=0,
+          staplecol='gray40',
+          whisklty=1, 
+          whiskcol="gray40", 
+          whisklwd=1,
+          boxcol='gray40', 
+          boxfill='gray87', 
+          boxwex=.5, 
+          medcol='gray40',
+          medlwd=1
+          )
+        )
+    box()
+  # Add axes and axis labels
+    axis(1, labels=FALSE, tick=TRUE)
+    axis(2, las=2, cex.axis=1.10)
+    mtext(side = 2, 'K', line=3.5)
+    
+# t0 by year of capture 
+  # Make initial boxplot to get 
+  # boxplot object, saved to h
+    h=boxplot(t0, plot=FALSE)
+  # Replace whisker length with the
+  # 95% Confidence intervals
+    h$stats[c(1,5), ] <- 
+      apply(t0, 2, quantile, probs=c(0.025, 0.975))[c(1,2), ]
+  # Re-plot the boxplot with the new whiskers 
+  # and add graphical parameters to make the
+  # plot prettier
+    bxp(h, boxfill='gray87',
+        outline=FALSE,
+        ylim=c(-3,0),
+        xaxt='n', yaxt='n',
+        plot=FALSE,
+        boxwex=.5, 
+        pars = list(
+          staplewex=0,
+          staplecol='gray40',
+          whisklty=1,
+          whiskcol="gray40",
+          whisklwd=1,
+          boxcol='gray40',
+          boxfill='gray87',
+          medcol='gray40',
+          medlwd=1
+          )
+        )
+    box()
+  axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
+  axis(2, las=2)
+  mtext(side = 1, 'Year of Collection', line=3.5)
+  mtext(side = 2, expression(paste('t'['0'])), line=3.5)
+
+dev.off()    
   
-# Make initial boxplot to get 
-# boxplot object, saved to h
-h=boxplot(k, plot=FALSE)
-
-# Replace whisker length with the
-# 95% Confidence intervals
-h$stats[c(1,5), ] = apply(k, 2, quantile, probs=c(0.025, 0.975))[c(1,2), ]
-
-# Re-plot the boxplot with the new whiskers 
-# and add graphical parameters to make the
-# plot prettier
-bxp(h, boxfill='gray87', outline=FALSE, ylim=c(0,.25), xaxt='n',
-    yaxt='n', plot=FALSE, boxwex=.5,
-    pars = list(staplewex=0, whisklty=1, whiskcol="gray40", whisklwd=2,
-                boxcol='gray40', boxfill='gray87', medcol='gray40')
-    )
-box()
-# Add axes and axis labels
-axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
-axis(2, las=2, cex.axis=1.10)
-mtext(side = 1, 'Year of Collection', line=3.5, cex=1.15)
-mtext(side = 2, 'K', line=3.5, cex=1.15)
-
-# ... Boxplot of linf by year of capture -----
-# Set graphical parameters
-par(mar=c(5,5,1,1))
-# Make initial boxplot to get 
-# boxplot object, saved to h
-h=boxplot(linf, plot=FALSE)
-# Replace whisker length with the
-# 95% Confidence intervals
-h$stats[c(1,5), ] = apply(linf, 2, quantile, probs=c(0.025, 0.975))[c(1,2), ]
-# Re-plot the boxplot with the new whiskers 
-# and add graphical parameters to make the
-# plot prettier
-bxp(h, boxfill='gray87', outline=FALSE, ylim=c(0,3000), xaxt='n',
-          yaxt='n', plot=FALSE, boxwex=.5,
-    pars = list(staplewex=0, whisklty=1, whiskcol="gray40", whisklwd=2,
-                boxcol='gray40', boxfill='gray87', medcol='gray40')
-    )
-box()
-axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
-axis(2, las=2, cex.axis=1.10)
-mtext(side = 1, 'Year of Collection', line=3.5, cex=1.15)
-mtext(side = 2, expression(paste('L'[infinity])), line=3.5, cex=1.15)
-  
-
 # ... Growth curves by year -----
 # Make a sequences of ages for the plots
 ages = seq(1, max(fish$Age), 1)
@@ -312,11 +391,25 @@ betah_l = vb_mod_cont$BUGSoutput$sims.list$betah_l
 beta0_k = vb_mod_cont$BUGSoutput$sims.list$beta0_k
 betah_k = vb_mod_cont$BUGSoutput$sims.list$betah_k
 
-# .. Plotting code for effect of hydrilla -----
-# ... Hdrilla vs L-infinity -----
 # since all data is on range from -2 to 2
-newBiomass = seq(-2, 2, 0.1)    
+newBiomassReal <- seq(100, 1400, 50)
+newBiomass <- nscale(newBiomassReal, biomass$ha)  
 
+
+# .. Plotting code for effect of hydrilla -----
+# Set up an image file
+tiff(filename='Figure3.tiff',
+     width = 1500,
+     height = 2000,
+     res = 500,
+     pointsize = 8,
+     units = 'px'
+     )
+
+# Set graphical parameters  
+par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
+
+# ... Hdrilla vs L-infinity -----
 # make an empty matrix to then fill with data later
 preds = matrix(NA, nrow = length(beta0_l), ncol = length(newBiomass))
 # Fill the matrix with predicted L-inf
@@ -329,34 +422,36 @@ for(i in 1:nrow(preds)){
 }
 preds = exp(preds)
 
-
 # Plot the first prediction to get a plotting window set up
-par(mar = c(5,5,1,1))
 plot(x = newBiomass, y = preds[1, ], type = 'l',
-     col = rgb(0.4, 0.4, 0.4, 0.05),
-     xlab = "Standardized Surface Hectares", ylab = expression(paste('L'[infinity])),
-     yaxt = 'n', ylim = c(1000,1200))  
+     col = rgb(0.6, 0.6, 0.6, 0.05),
+     xlab = "", 
+     xaxt = 'n',
+     xlim=c(-1.5,1.75),
+     ylab = '',
+     yaxt = 'n',
+     ylim = c(1000,1400)
+     )  
+mtext(side=2, expression(paste('L'[infinity])), line=3.5)
 axis(2, las = 2)
+axis(1, labels = FALSE, tick = TRUE)
 # now we add the loop for the rest of the data
 for (i in 2:nrow(preds)){
   lines(x = newBiomass, y = preds[i, ],
-        col = rgb(0.4, 0.4, 0.4, 0.05))
+        col = rgb(0.6, 0.6, 0.6, 0.05))
 }
 
 # get the mean and 95% CRIs, defined the upper and lower CRI functions above
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = mean),
-      col = 'blue', lwd = 2)
+      col = 'black', lwd = 1)
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = low),
-      col = 'red', lwd = 2, lty = 2)
+      col = 'black', lwd = 1, lty = 2)
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
-      col = 'red', lwd = 2, lty = 2)
+      col = 'black', lwd = 1, lty = 2)
 box()
 
 # ... Hydrilla vs k -----
-# since all data is on range from -2 to 2
-newBiomass = seq(-2, 2, 0.1)    
-
-# make an empty matrix to then fill with data later
+# Make an empty matrix to then fill with data later
 preds = matrix(NA, nrow = length(beta0_k), ncol = length(newBiomass))
 # Fill the matrix with predicted L-inf
 # based on the linear predictor that
@@ -369,34 +464,36 @@ for(i in 1:nrow(preds)){
 preds = exp(preds)
 
 # Plot the first prediction to get a plotting window set up
-par(mar = c(5,5,1,1))
 plot(x = newBiomass, y = preds[1, ], type = 'l',
-     col = rgb(0.4, 0.4, 0.4, 0.05),
-     xlab = "Standardized Surface Hectares", ylab = 'K',
-     yaxt = 'n', ylim = c(0.1, 0.3))  
+     col = rgb(0.6, 0.6, 0.6, 0.05),
+     xaxt='n',
+     xlab = "",
+     xlim=c(-1.5,1.75),
+     ylab = '',
+     yaxt = 'n',
+     ylim = c(0.1, 0.25)
+     )
+axis(1, labels=FALSE, tick=TRUE)
+mtext(side=2, 'K', line=3.5)
 axis(2, las = 2)
 # now we add the loop for the rest of the data
 for (i in 2:nrow(preds)){
   lines(x = newBiomass, y = preds[i, ],
-        col = rgb(0.4, 0.4, 0.4, 0.05))
+        col = rgb(0.6, 0.6, 0.6, 0.05))
 }
 
 # get the mean and 95% CRIs, defined the upper and lower CRI functions above
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = mean),
-      col = 'blue', lwd = 2)
+      col = 'black', lwd = 1)
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = low),
-      col = 'red', lwd = 2, lty = 2)
+      col = 'black', lwd = 1, lty = 2)
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
-      col = 'red', lwd = 2, lty = 2)
+      col = 'black', lwd = 1, lty = 2)
 box()
 
 
-
 # ... Hydrilla vs M -----
-# since all data is on range from -2 to 2
-newBiomass = seq(-2, 2, 0.1)    
-
-# make an empty matrix to then fill with data later
+# Make an empty matrix to then fill with data later
 preds = matrix(NA, nrow = length(beta0_k), ncol = length(newBiomass))
 # Fill the matrix with predicted L-inf
 # based on the linear predictor that
@@ -410,23 +507,28 @@ preds = exp(preds)
 preds <- apply(preds, 2, FUN='*', 1.5)
 
 # Plot the first prediction to get a plotting window set up
-par(mar = c(5,5,1,1))
 plot(x = newBiomass, y = preds[1, ], type = 'l',
-     col = rgb(0.4, 0.4, 0.4, 0.05),
-     xlab = "Standardized Surface Hectares", ylab = 'M',
-     yaxt = 'n', ylim = c(0.1, 0.3))  
-axis(2, las = 2)
+     col = rgb(0.6, 0.6, 0.6, 0.05),
+     xlab = '', xlim=c(-1.5,1.75), xaxt='n',ylab = '',
+     yaxt = 'n', ylim = c(0.1, 0.4)) 
+mtext(side=1, "Surface hectares of hydrilla", line=3.5)
+mtext(side=2, 'M', line=3.5)
+axis(1, at=nscale(seq(0,1400,200), biomass$ha),
+     labels=seq(0,1400,200))
+axis(2, at=seq(0,.4,.1), labels=seq(0,.4,.1), las = 2)
 # now we add the loop for the rest of the data
 for (i in 2:nrow(preds)){
   lines(x = newBiomass, y = preds[i, ],
-        col = rgb(0.4, 0.4, 0.4, 0.05))
+        col = rgb(0.6, 0.6, 0.6, 0.05))
 }
 
 # get the mean and 95% CRIs, defined the upper and lower CRI functions above
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = mean),
-      col = 'blue', lwd = 2)
+      col = 'black', lwd = 1)
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = low),
-      col = 'red', lwd = 2, lty = 2)
+      col = 'black', lwd = 1, lty = 2)
 lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
-      col = 'red', lwd = 2, lty = 2)
+      col = 'black', lwd = 1, lty = 2)
 box()
+
+dev.off()
