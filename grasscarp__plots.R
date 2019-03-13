@@ -4,11 +4,6 @@
 
 
 # . Function definition ----
-# Create function to invert logit link function
-  inv.logit = function(x){
-    exp(x)/(1+exp(x))
-  }
-
 # Make a function to get lower 95% credible limit with short name
   low = function(x){
     quantile(x, probs=c(0.025))
@@ -24,7 +19,11 @@
   nscale <- function(xn, xo){
     (xn - mean(xo) ) / sd(xo)
   }
-  
+
+# Unscale
+  unscale <- function(x, y){
+    x * sd(y) + mean(y)
+  }    
   
 # Data manipulation ----
 # . Fish data ----

@@ -10,32 +10,6 @@
   Sys.setenv(LOCAL_CPPFLAGS = '-march=native')
 
 # . Function definition ----
-# Create function to invert logit link function
-  inv.logit = function(x){
-    exp(x)/(1+exp(x))
-  }
-
-# Make a function to get lower 95% credible limit with short name
-  low = function(x){
-    quantile(x, probs=c(0.025))
-  }
-
-# Make a function to get upper 95% credible limit with short name
-  up = function(x){
-    quantile(x, probs=c(0.975))
-  }
-  
-# Scale new values of variable
-# based on a sample
-  nscale <- function(xn, xo){
-    (xn - mean(xo) ) / sd(xo)
-  }
-  
-# Unscale
-  unscale <- function(x, y){
-    x * sd(y) + mean(y)
-  }
-  
 # ses
   ses <- function(x){
     sd(x)/sqrt(length(x)-1)
@@ -127,16 +101,6 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
     ngroups = length(unique(fish$yearc)),
     hydrilla = as.vector(scale(fish$ha))
   )
-
-# Initial values for parameters
-# Get observed max lengths for each 
-# age class
-  starts <- ddply(fish,
-        'yearc',
-        summarize,
-        linfs = max(Length),
-        se=ses(Length)
-        )
 
 # Inits for stan
   inits <- function(){
