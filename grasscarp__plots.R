@@ -214,16 +214,16 @@ plot(fish$Age, fish$Length,
      xlim=c(0, 25),
      axes = FALSE,
      pch = 21,
-     bg=c("black", "red", 'blue', 'green', 'orange')[as.factor(fish$yearc)],
-     col=c("black", "red", 'blue', 'green', 'orange')[as.factor(fish$yearc)],
+     bg='gray87',
+     col='gray87',
      main='')
 
 # Add the growth curves  
-lines(x = ages, y = first, col = 'black', lwd = 2)
-lines(x = ages, y = second, col = 'red', lwd = 2)
-lines(x = ages, y = third, col = 'blue', lwd = 2)
-lines(x = ages, y = fourth, col = 'green', lwd = 2)
-lines(x = ages, y = fifth, col = 'orange', lwd = 2)
+lines(x = ages, y = first, col = 'black', lwd = 2, lty = 1)
+lines(x = ages, y = second, col = 'black', lwd = 2, lty = 2)
+lines(x = ages, y = third, col = 'black', lwd = 2, lty = 3)
+lines(x = ages, y = fourth, col = 'black', lwd = 2, lty = 4)
+lines(x = ages, y = fifth, col = 'black', lwd = 2, lty = 5)
 
 # Add axes and labels
 axis(1, pos=0)
@@ -234,8 +234,8 @@ mtext('Total length (mm)', side=2, line=2.5)
 # Add legend
 legend('bottomright', inset = 0.05,
        legend=c("2006", "2007", '2009', '2010', '2017'),
-       col=c("black", "red", 'blue', 'green', 'orange'),
-       lty = 1, title = 'Year of Capture', box.lty = 0, lwd = 2)
+       col='black',
+       lty = c(1, 2, 3, 4, 5), title = 'Year of Capture', box.lty = 0, lwd = 2)
 
   
 
@@ -389,3 +389,4 @@ lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
 box()
 
 dev.off()
+
