@@ -9,15 +9,11 @@ data {
 }
 parameters {
   real<lower = 0> sigmaLength;
-  //real  linf;
-  //real  k;
   real  b0_linf;
   real  bh_linf;
   real  b0_k;
   real  bh_k;
   real  t0;
-  //real<lower = 0> s_linf;
-  //real<lower = 0> s_k;
   
 }
 model {
