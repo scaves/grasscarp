@@ -17,7 +17,7 @@
   
 # Data manipulation ----
 # . Fish data ----
-fish = read.csv('grasscarplengths.csv')  
+fish = read.csv('grasscarplengths.csv', stringsAsFactors = F)  
   
 # Drop missing data   
 fish <- fish[!is.na(fish$Age) & !is.na(fish$Length), ]
@@ -47,7 +47,7 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
 # Merge hydrilla data with fish data
   fish = merge(x = hydrilla, y = fish, by = 'Year')
 
-# Simple VBGF in stan -----
+# Simple VBGF -----
 # Package the data for stan
   vb_data = list(
     length = fish$Length,
@@ -91,40 +91,150 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
 #   save(fit, file='yearmod-result.rda')
 
   
-# Hydrilla VBGF in stan -----
+# Multivariate with hydrilla effect -----
 # Package the data for stan
   vb_data = list(
     length = fish$Length,
     age = fish$Age,
-    nFish = nrow(fish),
-    group = as.numeric(as.factor(fish$yearc)),
-    ngroups = length(unique(fish$yearc)),
-    hydrilla = as.vector(scale(fish$ha))
+    nobs = nrow(fish),
+    nfish = length(unique(as.numeric(as.factor(fish$fishID)))),
+    fishID = as.numeric(as.factor(fish$fishID)),
+    hydrilla = as.vector(scale(fish$ha)),
+    hp_tau = 1.5,
+    hp_sigma = 10,
+    hp_omega = 1, # default was 2
+    p_mu_gamma = 0,
+    p_mu_gammaSD = 2
   )
 
+# Parameters to save ---
+  params = c('mu_gamma', 'beta_linf', 'beta_k')
+  
 # Inits for stan
   inits <- function(){
     list(
-      b0_linf = rnorm(1, 1000, 50),
-      K = rnorm(1, 0, 1),
-      t0 = rnorm(1, 0, 1)
+      b0_linf = 1100,
+      b0_k = .5,
+      b0_t0 = -1
     )
   }
   
 # Fit the model with stan  
-  fit <- stan(file = 'vonbert_hydrilla.stan',
+  fit <- stan(file = 'vonbert_hydrilla_mv.stan',
               data = vb_data,
+              #pars = params,
               chains = 3,
               iter = 1000,
-              init = inits,
+              warmup = 900,
+              #init = inits,
               control = list(adapt_delta = .8)
               )  
   
 # Print model summary
   print(fit, digits=3)
 
-# Save fitted object to file
-  save(fit, file='hydrillamod-result.rda')
+# Extract parameters
+  pars <- extract(fit)
   
+# Make a histogram of Linf  
+  hist(pars$b0_linf) 
+  boxplot(pars$Linf[,1:10])
   
+
+# Individual random effect -----
+# Package the data for stan
+  vb_data = list(
+    length = fish$Length,
+    age = fish$Age,
+    nobs = nrow(fish),
+    nfish = length(unique(as.numeric(as.factor(fish$fishID)))),
+    fishID = as.numeric(as.factor(fish$fishID)),
+    hydrilla = as.vector(scale(fish$ha)),
+    hp_tau = 1.5,
+    hp_sigma = 10,
+    hp_omega = 1, # default was 2
+    p_mu_gamma = 0,
+    p_mu_gammaSD = 2
+  )
+
+# Parameters to save ---
+  params = c('mu_gamma', 'Linf', 'K', 't0')
   
+# Inits for stan
+  inits <- function(){
+    list(
+      mu_gamma = c(7, 0, 0)
+    )
+  }
+  
+# Fit the model with stan  
+  fit <- stan(file = 'vonbert_individual_mv.stan',
+              data = vb_data,
+              pars = params,
+              chains = 3,
+              iter = 4000,
+              warmup = 3500,
+              #init = inits,
+              control = list(adapt_delta = .8)
+              )  
+  
+# Print model summary
+  print(fit, digits=3)
+
+# Extract parameters
+  pars <- extract(fit)
+  
+# Make a histogram of Linf  
+  hist(exp(pars$mu_gamma[,1])) 
+  boxplot(pars$Linf[,1:100])  
+  
+
+# Individual + hydrilla mv STILL WORKING ON THIS -----
+# Package the data for stan
+  vb_data = list(
+    length = fish$Length,
+    age = fish$Age,
+    nobs = nrow(fish),
+    nfish = length(unique(as.numeric(as.factor(fish$fishID)))),
+    fishID = as.numeric(as.factor(fish$fishID)),
+    hydrilla = as.vector(scale(fish$ha)),
+    hp_tau = 1.5,
+    hp_sigma = 10,
+    hp_omega = 1, # default was 2
+    p_mu_gamma = 0,
+    p_mu_gammaSD = 2
+  )
+
+# Parameters to save ---
+  params = c('b0_linf', 'b0_k', 'b0_t0', 'bh_k', 'bh_linf')
+  
+# Inits for stan
+  inits <- function(){
+    list(
+      b0_linf = 7.1,
+      bh_linf = -2
+    )
+  }
+  
+# Fit the model with stan  
+  fit <- stan(file = 'vonbert_individual_hydrilla_mv.stan',
+              data = vb_data,
+              pars = params,
+              chains = 3,
+              iter = 4000,
+              warmup = 3500,
+              #init = inits,
+              control = list(adapt_delta = .8)
+              )  
+  
+# Print model summary
+  print(fit, digits=3)
+
+# Extract parameters
+  pars <- extract(fit)
+  
+# Sanity check
+  hist(exp(pars$b0_k))
+  
+# Save the model fit 
+save(fit, file='vonbert_individual_hydrilla_mv.rda')  
