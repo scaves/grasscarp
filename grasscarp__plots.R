@@ -257,6 +257,13 @@ newBiomassReal <- seq(100, 1400, 50)
 newBiomass <- nscale(newBiomassReal, fish$ha)  
 
 # . Plotting code for effect of hydrilla -----
+# .. Load the results ----
+# Load the model fit object called 'fit'
+  load("vonbert__hydrilla_mv.rda") 
+
+# Extract the model parameters
+  pars = extract(fit)
+  
 # Set up an image file
 tiff(filename='Figure3.tiff',
      width = 1500,
@@ -270,14 +277,18 @@ tiff(filename='Figure3.tiff',
 par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
 
 # ... Hdrilla vs L-infinity -----
-# make an empty matrix to then fill with data later
-preds = matrix(NA, nrow = length(beta0_l), ncol = length(newBiomass))
+# Make a sequence of new biomasses
+newBiomass = seq(-2, 2, 0.1)
+
+# Make an empty matrix to then fill with data later
+preds = matrix(NA, nrow = length(pars$b0_linf), ncol = length(newBiomass))
+
 # Fill the matrix with predicted L-inf
 # based on the linear predictor that
 # uses hydrilla biomass
 for(i in 1:nrow(preds)){
   for(t in 1:length(newBiomass)){
-    preds[i, t] = (beta0_l[i] + betah_l[i]*newBiomass[t])
+    preds[i, t] = exp(pars$b0_linf[i] + pars$bh_linf[i]*newBiomass[t])
   }
 }
 
@@ -289,7 +300,7 @@ plot(x = newBiomass, y = preds[1, ], type = 'l',
      xlim=c(-1.5,1.75),
      ylab = '',
      yaxt = 'n',
-     ylim = c(1000,1400)
+     ylim = c(0,3000)
      )  
 mtext(side=2, expression(paste('L'[infinity])), line=3.5)
 axis(2, las = 2)

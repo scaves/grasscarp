@@ -4,3 +4,5 @@
 .Ruserdata
 grasscarp.Rproj
 *.rds
+gc_data_merged.csv
+l-f_hists.png

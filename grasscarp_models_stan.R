@@ -1,5 +1,6 @@
 # Front-end needs ----
 # . Load necessary packages ----
+  library(Rcpp)
   library(rstan)
   library(FSA)
   library(plyr)
@@ -47,7 +48,7 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
 # Merge hydrilla data with fish data
   fish = merge(x = hydrilla, y = fish, by = 'Year')
 
-# Simple VBGF -----
+# Annual VBGF -----
 # Package the data for stan
   vb_data = list(
     length = fish$Length,
@@ -92,42 +93,48 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
 
   
 # Multivariate with hydrilla effect -----
+  fish = fish[fish$agec == fish$Age, ]  
+  
 # Package the data for stan
   vb_data = list(
     length = fish$Length,
     age = fish$Age,
     nobs = nrow(fish),
+    fish = sort(unique(as.numeric(as.factor(fish$fishID)))),
     nfish = length(unique(as.numeric(as.factor(fish$fishID)))),
     fishID = as.numeric(as.factor(fish$fishID)),
     hydrilla = as.vector(scale(fish$ha)),
     hp_tau = 1.5,
     hp_sigma = 10,
     hp_omega = 1, # default was 2
-    p_mu_gamma = 0,
-    p_mu_gammaSD = 2
+    p_linf = 7,
+    p_linf_sd = .5,
+    p_k = -1,
+    p_k_sd = .5
   )
 
 # Parameters to save ---
-  params = c('mu_gamma', 'beta_linf', 'beta_k')
+  params = c('b0_linf', 'bh_linf', 'b0_k', 'bh_k', 'b0_t0')
   
 # Inits for stan
   inits <- function(){
     list(
-      b0_linf = 1100,
-      b0_k = .5,
-      b0_t0 = -1
+      b0_linf = 7,
+      b0_k = -1.4,
+      b0_t0 = 0
     )
   }
   
 # Fit the model with stan  
   fit <- stan(file = 'vonbert_hydrilla_mv.stan',
               data = vb_data,
-              #pars = params,
+              pars = params,
               chains = 3,
-              iter = 1000,
-              warmup = 900,
-              #init = inits,
-              control = list(adapt_delta = .8)
+              iter = 10,
+              #warmup = 400,
+              init = inits,
+              control = list(adapt_delta = .999,
+                             max_treedepth=15)
               )  
   
 # Print model summary
@@ -136,9 +143,21 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
 # Extract parameters
   pars <- extract(fit)
   
-# Make a histogram of Linf  
-  hist(pars$b0_linf) 
-  boxplot(pars$Linf[,1:10])
+# Look at pairs plot
+  #pairs(fit)
+  
+# Sanity check
+  hist(exp(pars$b0_k))
+  hist(exp(pars$b0_linf))
+  
+  hist(pars$b0_linf)  
+  hist(pars$bh_linf)  
+  hist(pars$b0_k)
+  hist(pars$bh_k)
+  hist(pars$b0_t0)
+  
+# Save the model fit 
+save(fit, file='vonbert__hydrilla_individual_mv.rda')  
   
 
 # Individual random effect -----
@@ -190,41 +209,48 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
   
 
 # Individual + hydrilla mv STILL WORKING ON THIS -----
+  fish=fish[fish$agec >= 15, ]
+  
 # Package the data for stan
   vb_data = list(
     length = fish$Length,
     age = fish$Age,
     nobs = nrow(fish),
+    fish = sort(unique(as.numeric(as.factor(fish$fishID)))),
     nfish = length(unique(as.numeric(as.factor(fish$fishID)))),
     fishID = as.numeric(as.factor(fish$fishID)),
     hydrilla = as.vector(scale(fish$ha)),
     hp_tau = 1.5,
     hp_sigma = 10,
     hp_omega = 1, # default was 2
-    p_mu_gamma = 0,
-    p_mu_gammaSD = 2
+    p_linf = 7,
+    p_linf_sd = .5,
+    p_k = -1,
+    p_k_sd = .5
   )
 
 # Parameters to save ---
-  params = c('b0_linf', 'b0_k', 'b0_t0', 'bh_k', 'bh_linf')
+  params = c('linf', 'bh_linf', 'k', 'bh_k', 'b0_t0')
   
 # Inits for stan
   inits <- function(){
     list(
-      b0_linf = 7.1,
-      bh_linf = -2
+      linf = 7,
+      k = -1.4,
+      b0_t0 = 0
     )
   }
   
 # Fit the model with stan  
-  fit <- stan(file = 'vonbert_individual_hydrilla_mv.stan',
+  fit <- stan(file = 'vonbert_hydrilla_individual_mv.stan',
               data = vb_data,
               pars = params,
               chains = 3,
-              iter = 4000,
-              warmup = 3500,
+              iter = 300,
+              warmup = 250,
               #init = inits,
-              control = list(adapt_delta = .8)
+              control = list(adapt_delta = .80,
+                             max_treedepth=10)
               )  
   
 # Print model summary
@@ -233,8 +259,37 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
 # Extract parameters
   pars <- extract(fit)
   
+# Look at pairs plot
+  pairs(fit)
+  
 # Sanity check
   hist(exp(pars$b0_k))
   
+  
+  
 # Save the model fit 
-save(fit, file='vonbert_individual_hydrilla_mv.rda')  
+save(fit, file='vonbert_hydrilla_individual_mv.rda')  
+
+
+# For Jess ----
+
+par(mfrow=c(2, 1), oma=c(4,4,0,1), mar=c(1,1,1,1))
+hist(fish2$Length[fish2$Year<=2010],
+     main = '', col='gray40',
+     yaxt = 'n', ylim = c(0, 60),
+     xaxt = 'n', xlim = c(0, 1400),
+     breaks = 20
+     )
+text(x=100, y=50, '2006 - 2010', adj = 0)
+axis(1, labels=F, pos=0)
+axis(2, las=2, pos=0)
+hist(fish2$Length[fish2$Year==2017],
+     main = '', col='gray40',
+     yaxt = 'n', ylim = c(0, 60),
+     xaxt = 'n', xlim = c(0, 1400)
+     )
+text(x=100, y=50, '2017', adj = 0)
+axis(1, labels=TRUE, pos=0)
+axis(2, las=2, pos=0)
+mtext(text = 'Total length (mm)', side = 1, line=3)
+mtext(text = 'Frequency', side = 2, line=3, adj=1.5)

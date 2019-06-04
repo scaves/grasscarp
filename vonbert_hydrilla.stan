@@ -1,10 +1,9 @@
 data {
-  int<lower = 0>           nFish; // number of fish
-  int<lower = 0>           ngroups; // number of sites
-  int<lower = 0>           group[nFish] ; // Dummy variable to ID pool
-  vector<lower = 0>[nFish] age; // Age of fish
-  real<lower = 0>          length[nFish]; // Length of fish
-  vector[nFish]            hydrilla; // standarized hydrilla ha
+  int<lower = 0>           nobs; // number of fish
+  int<lower = 0>           nfish; // number of sites
+  vector<lower = 0>[nobs]  age; // Age of fish
+  real<lower = 0>          length[nobs]; // Length of fish
+  vector[nobs]             hydrilla; // standarized hydrilla ha
   
 }
 parameters {
@@ -17,7 +16,7 @@ parameters {
   
 }
 model {
-  vector[nFish] vonBplaceholder;
+  vector[nobs] vonBplaceholder;
   real linf;
   real k;
 
@@ -25,7 +24,7 @@ model {
   b0_linf ~ normal(1100, 100);  
   
   // Model for expected length at age  
-  for(fish in 1:nFish){
+  for(fish in 1:nobs){
   
     linf = b0_linf + bh_linf * hydrilla[fish];
     k = b0_k + bh_k * hydrilla[fish];
