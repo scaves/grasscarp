@@ -25,6 +25,13 @@
     x * sd(y) + mean(y)
   }    
   
+# Make function to set negative values
+# to zero
+  zeroes <- function(x){
+    x[x<0] <- 0
+    return(x)
+  }  
+  
 # Data manipulation ----
 # . Fish data ----
 # Read in length-at-age data
@@ -259,7 +266,7 @@ newBiomass <- nscale(newBiomassReal, fish$ha)
 # . Plotting code for effect of hydrilla -----
 # .. Load the results ----
 # Load the model fit object called 'fit'
-  load("vonbert__hydrilla_mv.rda") 
+  load("vonbert_hydrilla_mv.rda") 
 
 # Extract the model parameters
   pars = extract(fit)
@@ -278,7 +285,7 @@ par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
 
 # ... Hdrilla vs L-infinity -----
 # Make a sequence of new biomasses
-newBiomass = seq(-2, 2, 0.1)
+newBiomass = seq(min(vb_data$hydrilla), max(vb_data$hydrilla), 0.1)
 
 # Make an empty matrix to then fill with data later
 preds = matrix(NA, nrow = length(pars$b0_linf), ncol = length(newBiomass))
@@ -288,7 +295,7 @@ preds = matrix(NA, nrow = length(pars$b0_linf), ncol = length(newBiomass))
 # uses hydrilla biomass
 for(i in 1:nrow(preds)){
   for(t in 1:length(newBiomass)){
-    preds[i, t] = exp(pars$b0_linf[i] + pars$bh_linf[i]*newBiomass[t])
+    preds[i, t] = exp(pars$mu_beta_cor[i,1] + pars$b0_linf[i] + pars$bh_linf[i]*newBiomass[t])
   }
 }
 
@@ -297,10 +304,10 @@ plot(x = newBiomass, y = preds[1, ], type = 'l',
      col = rgb(0.6, 0.6, 0.6, 0.05),
      xlab = "", 
      xaxt = 'n',
-     xlim=c(-1.5,1.75),
+     xlim=c(min(vb_data$hydrilla), max(vb_data$hydrilla)),
      ylab = '',
      yaxt = 'n',
-     ylim = c(0,3000)
+     ylim = c(1000,2000)
      )  
 mtext(side=2, expression(paste('L'[infinity])), line=3.5)
 axis(2, las = 2)
@@ -321,14 +328,17 @@ lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
 box()
 
 # ... Hydrilla vs k -----
+# Make a sequence of new biomasses
+newBiomass = seq(min(vb_data$hydrilla), max(vb_data$hydrilla), 0.1)
+
 # Make an empty matrix to then fill with data later
-preds = matrix(NA, nrow = length(beta0_k), ncol = length(newBiomass))
+preds = matrix(NA, nrow = length(pars$b0_k), ncol = length(newBiomass))
 # Fill the matrix with predicted L-inf
 # based on the linear predictor that
 # uses hydrilla biomass
 for(i in 1:nrow(preds)){
   for(t in 1:length(newBiomass)){
-    preds[i, t] = (beta0_k[i] + betah_k[i]*newBiomass[t])
+    preds[i, t] = exp(pars$mu_beta_cor[i,2] + pars$b0_k[i] + pars$bh_k[i]*newBiomass[t])
   }
 }
 
@@ -337,10 +347,9 @@ plot(x = newBiomass, y = preds[1, ], type = 'l',
      col = rgb(0.6, 0.6, 0.6, 0.05),
      xaxt='n',
      xlab = "",
-     xlim=c(-1.5,1.75),
      ylab = '',
      yaxt = 'n',
-     ylim = c(0.1, 0.25)
+     ylim = c(0, 0.5)
      )
 axis(1, labels=FALSE, tick=TRUE)
 mtext(side=2, 'K', line=3.5)
@@ -363,13 +372,13 @@ box()
 
 # ... Hydrilla vs M -----
 # Make an empty matrix to then fill with data later
-preds = matrix(NA, nrow = length(beta0_k), ncol = length(newBiomass))
+preds = matrix(NA, nrow = length(pars$b0_linf), ncol = length(newBiomass))
 # Fill the matrix with predicted L-inf
 # based on the linear predictor that
 # uses hydrilla biomass
 for(i in 1:nrow(preds)){
   for(t in 1:length(newBiomass)){
-    preds[i, t] = (beta0_k[i] + betah_k[i]*newBiomass[t])
+    preds[i, t] = exp(pars$mu_beta_cor[i,2] + pars$b0_k[i] + pars$bh_k[i]*newBiomass[t])
   }
 }
 preds <- apply(preds, 2, FUN='*', 1.5)
@@ -377,13 +386,13 @@ preds <- apply(preds, 2, FUN='*', 1.5)
 # Plot the first prediction to get a plotting window set up
 plot(x = newBiomass, y = preds[1, ], type = 'l',
      col = rgb(0.6, 0.6, 0.6, 0.05),
-     xlab = '', xlim=c(-1.5,1.75), xaxt='n',ylab = '',
-     yaxt = 'n', ylim = c(0.1, 0.4)) 
+     xlab = '', xaxt='n',ylab = '',
+     yaxt = 'n', ylim = c(0, .5)) 
 mtext(side=1, "Surface hectares of hydrilla", line=3.5)
 mtext(side=2, 'M', line=3.5)
 axis(1, at=nscale(seq(0,1400,200), fish$ha),
      labels=seq(0,1400,200))
-axis(2, at=seq(0,.4,.1), labels=seq(0,.4,.1), las = 2)
+axis(2, at=seq(0,1,.1), labels=seq(0,1,.1), las = 2)
 # now we add the loop for the rest of the data
 for (i in 2:nrow(preds)){
   lines(x = newBiomass, y = preds[i, ],
@@ -401,3 +410,74 @@ box()
 
 dev.off()
 
+# Growth curve ----
+# Load the results
+  fish = fish[fish$agec == fish$Age, ]
+
+  load("vonbert_hydrilla_mv.rda")
+
+# Extract parameter estimates from model fit
+  pars = extract(fit)
+  
+# Offsets
+  Linf = exp(pars$mu_beta_cor[,1] + pars$b0_linf)
+  K = exp(pars$mu_beta_cor[,2] + pars$b0_k)
+  t0 = pars$mu_beta_cor[,3] + pars$b0_t0
+  
+# Make a sequence of new ages for which we will predict lengths
+  Age = seq(0, 23, .1)
+
+# Predict mean length at age for each sample
+  preds = matrix(0, length(Linf), length(Age))
+  for(i in 1:length(Linf)){
+    for(t in 1:length(Age)){
+      preds[i,t] = Linf[i]*(1-exp(-K[i]*(Age[t]-(t0[i]))))
+    }
+  }
+
+# # Open file connection
+#   png(
+#     filename = paste0('results/oto_regional/Coastwide_regional.png'),
+#     height = 878,
+#     width = 1314,
+#     pointsize = 32
+#     )
+
+# Make the plot
+  par(mar=c(5,5,1,1))
+  plot(fish$Age, fish$Length, ylim=c(0, 1400),
+       yaxt='n', xlab='Age (years)',
+       ylab='Fork length (mm)',
+       xlim=c(0,23), axes = FALSE,
+       pch = 21, bg='white', col='white',
+       main='')
+
+# Calculate the mean and 95% CRIs for posterior predictions
+  muPred = apply(preds, 2, mean)
+  lowPred = apply(preds, 2, low)
+  lowPred = zeroes(lowPred)
+  upPred = apply(preds, 2, up)
+
+# Add a polygon for 95% CI
+  polygon(c(Age, rev(Age)), c(lowPred, rev(upPred)),
+          col=rgb(.8, .8, .8, 0.5),
+          border=rgb(.8, .8, .8, 0.5)
+          )
+# Add the raw data
+  points(fish$Age, fish$Length,
+         pch = 21,
+         col=rgb(.4, .4, .4, 0.9),
+         bg=rgb(.4, .4, .4, 0.5)
+  )
+
+# Plot the mean and 95% CRI for predicted length at each age
+  lines(Age, muPred, col='blue', lwd=1, lty=1)
+  lines(Age, upPred, col='red', lwd=1, lty=2)
+  lines(Age, lowPred, col='red', lwd=1, lty=2)
+
+# Plot axes
+  axis(1, pos=0, at=seq(0,23,1), labels=seq(0,23,1))
+  axis(2, pos=0, las=2)
+
+# Close file connection
+  # dev.off()  
