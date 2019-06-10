@@ -253,7 +253,7 @@ load("results/vonbert_hydrilla_mv.rda")
 # Extract the model parameters
 pars = extract(fit)
   
-# Set up an image file
+# .. Set up an image file ----
 tiff(filename='results/Figure3.tiff',
      width = 1500,
      height = 2000,
@@ -286,28 +286,31 @@ plot(x = newBiomass, y = preds[1, ], type = 'l',
      col = rgb(0.6, 0.6, 0.6, 0.05),
      xlab = "", 
      xaxt = 'n',
-     xlim=c(min(vb_data$hydrilla), max(vb_data$hydrilla)),
+     xlim = c(min(vb_data$hydrilla), max(vb_data$hydrilla)),
      ylab = '',
      yaxt = 'n',
      ylim = c(1000,2000)
      )  
 mtext(side=2, expression(paste('L'[infinity])), line=3.5)
 axis(2, las = 2)
-axis(1, labels = FALSE, tick = TRUE)
-# now we add the loop for the rest of the data
-for (i in 2:nrow(preds)){
-  lines(x = newBiomass, y = preds[i, ],
-        col = rgb(0.6, 0.6, 0.6, 0.05))
-}
+axis(1, at=nscale(seq(0,1400,200), fish$ha), labels=FALSE)
+
+# Calculate the mean and 95% CRIs for posterior predictions
+muPred = apply(preds, 2, mean)
+lowPred = apply(preds, 2, low)
+lowPred = zeroes(lowPred)
+upPred = apply(preds, 2, up)
+
+polygon(c(newBiomass, rev(newBiomass)), c(lowPred, rev(upPred)),
+        col=rgb(.8, .8, .8, 0.5),
+        border=NA
+        )
 
 # get the mean and 95% CRIs, defined the upper and lower CRI functions above
-lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = mean),
-      col = 'black', lwd = 1)
-lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = low),
-      col = 'black', lwd = 1, lty = 2)
-lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
-      col = 'black', lwd = 1, lty = 2)
-box()
+lines(x = newBiomass, y = muPred, col = 'black', lwd = .5)
+#lines(x = newBiomass, y = lowPred, col = 'black', lwd = 1, lty = 2)
+#lines(x = newBiomass, y = upPred, col = 'black', lwd = 1, lty = 2)
+
 
 # .. Hydrilla vs k -----
 # Make a sequence of new biomasses
@@ -328,28 +331,31 @@ for(i in 1:nrow(preds)){
 plot(x = newBiomass, y = preds[1, ], type = 'l',
      col = rgb(0.6, 0.6, 0.6, 0.05),
      xaxt='n',
+     xlim = c(min(vb_data$hydrilla), max(vb_data$hydrilla)),
      xlab = "",
      ylab = '',
      yaxt = 'n',
      ylim = c(0, 0.5)
      )
-axis(1, labels=FALSE, tick=TRUE)
+axis(1, at=nscale(seq(0,1400,200), fish$ha), labels=FALSE)
 mtext(side=2, 'K', line=3.5)
 axis(2, las = 2)
-# now we add the loop for the rest of the data
-for (i in 2:nrow(preds)){
-  lines(x = newBiomass, y = preds[i, ],
-        col = rgb(0.6, 0.6, 0.6, 0.05))
-}
+
+# Calculate the mean and 95% CRIs for posterior predictions
+muPred = apply(preds, 2, mean)
+lowPred = apply(preds, 2, low)
+lowPred = zeroes(lowPred)
+upPred = apply(preds, 2, up)
+
+polygon(c(newBiomass, rev(newBiomass)), c(lowPred, rev(upPred)),
+        col=rgb(.8, .8, .8, 0.5),
+        border=NA
+        )
 
 # get the mean and 95% CRIs, defined the upper and lower CRI functions above
-lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = mean),
-      col = 'black', lwd = 1)
-lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = low),
-      col = 'black', lwd = 1, lty = 2)
-lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
-      col = 'black', lwd = 1, lty = 2)
-box()
+lines(x = newBiomass, y = muPred, col = 'black', lwd = .5)
+#lines(x = newBiomass, y = lowPred, col = 'black', lwd = 1, lty = 2)
+#lines(x = newBiomass, y = upPred, col = 'black', lwd = 1, lty = 2)
 
 
 # .. Hydrilla vs M -----
@@ -368,6 +374,7 @@ preds <- apply(preds, 2, FUN='*', 1.5)
 # Plot the first prediction to get a plotting window set up
 plot(x = newBiomass, y = preds[1, ], type = 'l',
      col = rgb(0.6, 0.6, 0.6, 0.05),
+     xlim = c(min(vb_data$hydrilla), max(vb_data$hydrilla)),
      xlab = '', xaxt='n',ylab = '',
      yaxt = 'n', ylim = c(0, .5)) 
 mtext(side=1, "Surface hectares of hydrilla", line=3.5)
@@ -375,20 +382,22 @@ mtext(side=2, 'M', line=3.5)
 axis(1, at=nscale(seq(0,1400,200), fish$ha),
      labels=seq(0,1400,200))
 axis(2, at=seq(0,1,.1), labels=seq(0,1,.1), las = 2)
-# now we add the loop for the rest of the data
-for (i in 2:nrow(preds)){
-  lines(x = newBiomass, y = preds[i, ],
-        col = rgb(0.6, 0.6, 0.6, 0.05))
-}
+
+# Calculate the mean and 95% CRIs for posterior predictions
+muPred = apply(preds, 2, mean)
+lowPred = apply(preds, 2, low)
+lowPred = zeroes(lowPred)
+upPred = apply(preds, 2, up)
+
+polygon(c(newBiomass, rev(newBiomass)), c(lowPred, rev(upPred)),
+        col=rgb(.8, .8, .8, 0.5),
+        border=NA
+        )
 
 # get the mean and 95% CRIs, defined the upper and lower CRI functions above
-lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = mean),
-      col = 'black', lwd = 1)
-lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = low),
-      col = 'black', lwd = 1, lty = 2)
-lines(x = newBiomass, y = apply(preds, MARGIN = 2, FUN = up),
-      col = 'black', lwd = 1, lty = 2)
-box()
+lines(x = newBiomass, y = muPred, col = 'black', lwd = .5)
+#lines(x = newBiomass, y = lowPred, col = 'black', lwd = 1, lty = 2)
+#lines(x = newBiomass, y = upPred, col = 'black', lwd = 1, lty = 2)
 
 dev.off()
 

@@ -133,8 +133,8 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
               iter = 3000,
               warmup = 2000,
               init = inits,
-              #control = list(adapt_delta = .999,
-              #               max_treedepth=15)
+              control = list(adapt_delta = .90,
+                             max_treedepth=15)
               )  
   
 # Print model summary
