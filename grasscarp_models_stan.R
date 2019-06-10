@@ -119,9 +119,9 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
 # Inits for stan
   inits <- function(){
     list(
-      b0_linf = 7,
-      b0_k = -1.4,
-      b0_t0 = 0
+      b0_linf = rnorm(1,0,1),
+      b0_k = rnorm(1,0,1),
+      b0_t0 = rnorm(1,0,1)
     )
   }
   
@@ -129,12 +129,12 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
   fit <- stan(file = 'models/vonbert_hydrilla_mv.stan',
               data = vb_data,
               pars = params,
-              chains = 3,
-              iter = 3000,
-              warmup = 2000,
+              chains = 4,
+              iter = 300,
+              warmup = 250,
               init = inits,
-              #control = list(adapt_delta = .999,
-              #               max_treedepth=15)
+              control = list(adapt_delta = .90,
+                             max_treedepth=15)
               )  
   
 # Print model summary
