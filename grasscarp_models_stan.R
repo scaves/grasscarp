@@ -18,7 +18,7 @@
   
 # Data manipulation ----
 # . Fish data ----
-fish = read.csv('grasscarplengths.csv', stringsAsFactors = F)  
+fish = read.csv('data/grasscarplengths.csv', stringsAsFactors = F)  
   
 # Drop missing data   
 fish <- fish[!is.na(fish$Age) & !is.na(fish$Length), ]
@@ -40,7 +40,7 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
 
 # . Hydrilla data -----
 # Read data
-  hydrilla = read.csv('gcStockingAndHydrilla.csv')
+  hydrilla = read.csv('data/gcStockingAndHydrilla.csv')
 
 # Change year to match names in fish
   colnames(hydrilla)[1] = 'Year'
@@ -126,12 +126,12 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
   }
   
 # Fit the model with stan  
-  fit <- stan(file = 'vonbert_hydrilla_mv.stan',
+  fit <- stan(file = 'models/vonbert_hydrilla_mv.stan',
               data = vb_data,
               pars = params,
               chains = 3,
-              iter = 2000,
-              warmup = 1500,
+              iter = 3000,
+              warmup = 2000,
               init = inits,
               #control = list(adapt_delta = .999,
               #               max_treedepth=15)
@@ -157,7 +157,7 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
   hist(pars$b0_t0)
   
 # Save the model fit 
-save(fit, file='vonbert_hydrilla_mv.rda')  
+save(fit, file='results/vonbert_hydrilla_mv.rda')  
   
 
 # Individual random effect -----
@@ -187,7 +187,7 @@ save(fit, file='vonbert_hydrilla_mv.rda')
   }
   
 # Fit the model with stan  
-  fit <- stan(file = 'vonbert_individual_mv.stan',
+  fit <- stan(file = 'models/vonbert_individual_mv.stan',
               data = vb_data,
               pars = params,
               chains = 3,
@@ -270,6 +270,8 @@ save(fit, file='vonbert_hydrilla_mv.rda')
   
 # Save the model fit 
 save(fit, file='vonbert_hydrilla_mv_ind.rda')  
+
+
 
 
 # For Jess ----
