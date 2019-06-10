@@ -246,6 +246,27 @@ legend('bottomright', inset = 0.05,
 
 
 # . Hydrilla MV model -----
+# .. Data ----
+  fish = fish[fish$agec == fish$Age, ]  
+  
+# Package the data for stan
+  vb_data = list(
+    length = fish$Length,
+    age = fish$Age,
+    nobs = nrow(fish),
+    fish = sort(unique(as.numeric(as.factor(fish$fishID)))),
+    nfish = length(unique(as.numeric(as.factor(fish$fishID)))),
+    fishID = as.numeric(as.factor(fish$fishID)),
+    hydrilla = as.vector(scale(fish$ha)),
+    hp_tau = 1.5,
+    hp_sigma = 10,
+    hp_omega = 1, # default was 2
+    p_linf = 0,
+    p_linf_sd = 1,
+    p_k = 0,
+    p_k_sd = 1
+  )
+
 # .. Load the results ----
 # Load the model fit object called 'fit'
 load("results/vonbert_hydrilla_mv.rda") 

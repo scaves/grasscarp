@@ -296,3 +296,4 @@ axis(1, labels=TRUE, pos=0)
 axis(2, las=2, pos=0)
 mtext(text = 'Total length (mm)', side = 1, line=3)
 mtext(text = 'Frequency', side = 2, line=3, adj=1.5)
+
