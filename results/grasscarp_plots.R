@@ -275,7 +275,7 @@ load("results/vonbert_hydrilla_mv.rda")
 pars = extract(fit)
   
 # .. Set up an image file ----
-tiff(filename='results/Figure3.tiff',
+tiff(filename='results/Figure2.tiff',
      width = 1500,
      height = 2000,
      res = 500,
@@ -448,7 +448,7 @@ for(i in 1:length(Linf)){
 
 # Open file connection
 tiff(
-  filename = paste0('results/Figure4.tiff'),
+  filename = paste0('results/Figure1.tiff'),
   height = 878,
   width = 1314,
   pointsize = 32
