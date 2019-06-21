@@ -39,7 +39,7 @@ transformed parameters {
   K = // growth coefficient
     exp(mu_beta_cor[2] + (b0_k + bh_k*hydrilla));
   t0 = // hypothetical age at which fish's size = 0
-    mu_beta_cor[3] + (b0_t0);
+    exp(mu_beta_cor[3] + (b0_t0)) - 10;
 }
 model{
   vector[nobs] y;

@@ -70,7 +70,7 @@
 # . Year model ----
 # .. Load results ----
 # Load the model results
-  load('results/yearmod-result.rda')
+  load('results/vonbert_annual.rda')
 
 # Get parameters from the model
   parms <- extract(fit)
@@ -82,7 +82,7 @@
   
 # .. Boxplots of posteriors by year -----
 # Set up an image file
-tiff(filename='results/Figure1.tiff',
+tiff(filename='results/Figure0.tiff',
      width = 1500,
      height = 2000,
      res = 500,
@@ -106,7 +106,7 @@ par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
   # plot prettier
     bxp(h, boxfill='gray87',
         outline=FALSE,
-        ylim=c(0,3000),
+        ylim=c(1000,1500),
         xaxt='n', yaxt='n',
         plot=FALSE,
         boxwex=.5, 
@@ -140,7 +140,7 @@ par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
   # plot prettier
     bxp(h, boxfill='gray87',
         outline=FALSE,
-        ylim=c(0,.25),
+        ylim=c(0,.5),
         xaxt='n', yaxt='n',
         plot=FALSE, 
         pars = list(
@@ -175,7 +175,7 @@ par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
   # plot prettier
     bxp(h, boxfill='gray87',
         outline=FALSE,
-        ylim=c(-3,0),
+        ylim=c(-6,0),
         xaxt='n', yaxt='n',
         plot=FALSE,
         boxwex=.5, 
@@ -201,7 +201,15 @@ dev.off()
   
 # .. Growth curves by year -----
 # Make a sequences of ages for the plots
-ages = seq(1, max(fish$Age), 1)
+# Make a sequence of new ages for which we will predict lengths
+Age = seq(0, 23, .1)
+
+tiff(
+  filename = paste0('results/Figure1.tiff'),
+  height = 878,
+  width = 1314,
+  pointsize = 32
+  )
 
 # Posterior predictive vbgm for each year
 first = mean(linf[,1]) * (1-exp(-mean(k[,1])*(ages-mean(t0[,1]))))
@@ -211,18 +219,13 @@ fourth = mean(linf[,4]) * (1-exp(-mean(k[,4])*(ages-mean(t0[,4]))))
 fifth = mean(linf[,5]) * (1-exp(-mean(k[,5])*(ages-mean(t0[,5]))))
   
 # Plot the results
-# First, the raw data with no axes
-par(mar=c(4,4,1,1))
-plot(fish$Age, fish$Length, 
-     ylim=c(0, 1500),
-     yaxt='n',
-     xlab='',
-     ylab='',
-     xlim=c(0, 25),
-     axes = FALSE,
+par(mar=c(5,5,1,1))
+plot(fish$Age, fish$Length, ylim=c(0, 1400),
+     yaxt='n', ylab='', xlab='',
+     xlim=c(0,25), axes = FALSE,
      pch = 21,
-     bg='gray87',
-     col='gray87',
+     col=rgb(.4, .4, .4, 0.9),
+     bg=rgb(.4, .4, .4, 0.5),
      main='')
 
 # Add the growth curves  
@@ -244,6 +247,7 @@ legend('bottomright', inset = 0.05,
        col='black',
        lty = c(1, 2, 3, 4, 5), title = 'Year of Capture', box.lty = 0, lwd = 2)
 
+dev.off()
 
 # . Hydrilla MV model -----
 # .. Data ----
@@ -422,9 +426,9 @@ lines(x = newBiomass, y = muPred, col = 'black', lwd = .5)
 
 dev.off()
 
-# .. Growth curve ----
+# .. Hydrilla growth curve ----
 # Load the results
-fish = fish[fish$agec == fish$Age, ]
+#fish = fish[fish$agec == fish$Age, ]
 load("results/vonbert_hydrilla_mv.rda")
 
 # Extract parameter estimates from model fit
@@ -433,7 +437,7 @@ pars = extract(fit)
 # Offsets
 Linf = exp(pars$mu_beta_cor[,1] + pars$b0_linf)
 K = exp(pars$mu_beta_cor[,2] + pars$b0_k)
-t0 = pars$mu_beta_cor[,3] + pars$b0_t0
+t0 = exp(pars$mu_beta_cor[,3] + pars$b0_t0)-10
 
 # Make a sequence of new ages for which we will predict lengths
 Age = seq(0, 23, .1)
@@ -448,7 +452,7 @@ for(i in 1:length(Linf)){
 
 # Open file connection
 tiff(
-  filename = paste0('results/Figure1.tiff'),
+  filename = paste0('results/Figure1.5.tiff'),
   height = 878,
   width = 1314,
   pointsize = 32
@@ -456,11 +460,16 @@ tiff(
 
 # Make the plot
 par(mar=c(5,5,1,1))
-plot(fish$Age, fish$Length, ylim=c(0, 1400),
-     yaxt='n', xlab='Age (years)',
-     ylab='Fork length (mm)',
-     xlim=c(0,23), axes = FALSE,
-     pch = 21, bg='white', col='white',
+plot(fish$agec, fish$Length, 
+     ylab = 'Total length (mm)',
+     ylim=c(0, 1400),
+     yaxt='n', 
+     xlab='Age (years)',
+     xlim=c(0,25),
+     axes = FALSE,
+     pch = 21,
+     col=rgb(.4, .4, .4, 0.9),
+     bg=rgb(.4, .4, .4, 0.5),
      main='')
 
 # Calculate the mean and 95% CRIs for posterior predictions
@@ -472,14 +481,8 @@ upPred = apply(preds, 2, up)
 # Add a polygon for 95% CI
 polygon(c(Age, rev(Age)), c(lowPred, rev(upPred)),
         col=rgb(.8, .8, .8, 0.5),
-        border=rgb(.8, .8, .8, 0.5)
+        border=NA#rgb(.8, .8, .8, 0.5)
         )
-# Add the raw data
-points(fish$Age, fish$Length,
-       pch = 21,
-       col=rgb(.4, .4, .4, 0.9),
-       bg=rgb(.4, .4, .4, 0.5)
-)
 
 # Plot the mean and 95% CRI for predicted length at each age
 lines(Age, muPred, col='blue', lwd=1, lty=1)
@@ -487,7 +490,7 @@ lines(Age, upPred, col='red', lwd=1, lty=2)
 lines(Age, lowPred, col='red', lwd=1, lty=2)
 
 # Plot axes
-axis(1, pos=0, at=seq(0,23,1), labels=seq(0,23,1))
+axis(1, pos=0)
 axis(2, pos=0, las=2)
 
 # Close file connection
