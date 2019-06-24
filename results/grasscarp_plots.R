@@ -65,9 +65,12 @@
 # Merge hydrilla data with fish data
   fish = merge(x = hydrilla, y = fish, by = 'Year')
 
+# Drop back-calculated lengths
+  fish = fish[fish$Age == fish$agec,]
+  
   
 # Data visualization ----
-# . Year model ----
+# . Figure 1. Annual VBGF parameters ----
 # .. Load results ----
 # Load the model results
   load('results/vonbert_annual.rda')
@@ -82,7 +85,7 @@
   
 # .. Boxplots of posteriors by year -----
 # Set up an image file
-tiff(filename='results/Figure0.tiff',
+tiff(filename='results/Figure1.tiff',
      width = 1500,
      height = 2000,
      res = 500,
@@ -199,61 +202,141 @@ par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
 
 dev.off()    
   
-# .. Growth curves by year -----
-# Make a sequences of ages for the plots
-# Make a sequence of new ages for which we will predict lengths
-Age = seq(0, 23, .1)
 
-tiff(
-  filename = paste0('results/Figure1.tiff'),
-  height = 878,
-  width = 1314,
-  pointsize = 32
-  )
+# . Figure 2. Growth curves -----
+# Set up an image file
+  tiff(
+    filename = paste0('results/Figure2.tiff'),
+    height = 1750,
+    width = 1300,
+    pointsize = 32
+    )
+
+# Set graphical parameters
+  par(mfrow=c(2, 1), oma=c(4,4,1,1), mar=c(1,1,1,1))
+  
+# .. Year-of-capture model -----
+# Load the model results
+  load('results/vonbert_annual.rda')  
+  
+# Get parameters from the model
+  parms <- extract(fit)
+   
+# Get posterior distributions for parameter estimates
+  k = parms$K
+  t0 = parms$t0
+  linf = parms$Linf  
+
+# Make a sequence of new ages for which we will predict lengths
+  ages = seq(0, 23, .1)
 
 # Posterior predictive vbgm for each year
-first = mean(linf[,1]) * (1-exp(-mean(k[,1])*(ages-mean(t0[,1]))))
-second = mean(linf[,2]) * (1-exp(-mean(k[,2])*(ages-mean(t0[,2]))))
-third = mean(linf[,3]) * (1-exp(-mean(k[,3])*(ages-mean(t0[,3]))))
-fourth = mean(linf[,4]) * (1-exp(-mean(k[,4])*(ages-mean(t0[,4]))))
-fifth = mean(linf[,5]) * (1-exp(-mean(k[,5])*(ages-mean(t0[,5]))))
-  
+  first = mean(linf[,1]) * (1-exp(-mean(k[,1])*(ages-mean(t0[,1]))))
+  second = mean(linf[,2]) * (1-exp(-mean(k[,2])*(ages-mean(t0[,2]))))
+  third = mean(linf[,3]) * (1-exp(-mean(k[,3])*(ages-mean(t0[,3]))))
+  fourth = mean(linf[,4]) * (1-exp(-mean(k[,4])*(ages-mean(t0[,4]))))
+  fifth = mean(linf[,5]) * (1-exp(-mean(k[,5])*(ages-mean(t0[,5]))))
+    
 # Plot the results
-par(mar=c(5,5,1,1))
-plot(fish$Age, fish$Length, ylim=c(0, 1400),
-     yaxt='n', ylab='', xlab='',
-     xlim=c(0,25), axes = FALSE,
-     pch = 21,
-     col=rgb(.4, .4, .4, 0.9),
-     bg=rgb(.4, .4, .4, 0.5),
-     main='')
+  plot(fish$Age, fish$Length, ylim=c(0, 1400),
+       yaxt='n', ylab='', xlab='',
+       xlim=c(0,25), axes = FALSE,
+       pch = 21,
+       col=rgb(.4, .4, .4, 0.5),
+       bg=rgb(.4, .4, .4, 0.5),
+       main='')
 
 # Add the growth curves  
-lines(x = ages, y = first, col = 'black', lwd = 2, lty = 1)
-lines(x = ages, y = second, col = 'black', lwd = 2, lty = 2)
-lines(x = ages, y = third, col = 'black', lwd = 2, lty = 3)
-lines(x = ages, y = fourth, col = 'black', lwd = 2, lty = 4)
-lines(x = ages, y = fifth, col = 'black', lwd = 2, lty = 5)
+  lines(x = ages, y = first, col = 'black', lwd = 2, lty = 1)
+  lines(x = ages, y = second, col = 'black', lwd = 2, lty = 2)
+  lines(x = ages, y = third, col = 'black', lwd = 2, lty = 3)
+  lines(x = ages, y = fourth, col = 'black', lwd = 2, lty = 4)
+  lines(x = ages, y = fifth, col = 'black', lwd = 2, lty = 5)
 
 # Add axes and labels
-axis(1, pos=0)
-axis(2, pos=0, las=2)  
-mtext(expression(paste('Age (years)')), side=1, line=2.5)
-mtext('Total length (mm)', side=2, line=2.5) 
- 
+  axis(1, pos=0, labels=FALSE)
+  axis(2, pos=0, las=2)  
+   
 # Add legend
-legend('bottomright', inset = 0.05,
-       legend=c("2006", "2007", '2009', '2010', '2017'),
-       col='black',
-       lty = c(1, 2, 3, 4, 5), title = 'Year of Capture', box.lty = 0, lwd = 2)
+  legend('bottomright',
+         inset = 0.05,
+         legend=c("2006", "2007", '2009', '2010', '2017'),
+         col='black',
+         lty = c(1, 2, 3, 4, 5),
+         title = 'Year of Capture',
+         box.lty = 0,
+         lwd = 2
+         )
 
-dev.off()
 
-# . Hydrilla MV model -----
+# .. Covariate model ----
+# Load the results
+  load("results/vonbert_hydrilla_mv.rda")
+
+# Extract parameter estimates from model fit
+  pars = extract(fit)
+
+# Offsets
+  Linf = exp(pars$mu_beta_cor[,1] + pars$b0_linf)
+  K = exp(pars$mu_beta_cor[,2] + pars$b0_k)
+  t0 = exp(pars$mu_beta_cor[,3] + pars$b0_t0)-10
+
+# Make a sequence of new ages for which we will predict lengths
+  Age = seq(0, 23, .1)
+
+# Predict mean length at age for each sample
+  preds = matrix(0, length(Linf), length(Age))
+  for(i in 1:length(Linf)){
+    for(t in 1:length(Age)){
+      preds[i,t] = Linf[i]*(1-exp(-K[i]*(Age[t]-(t0[i]))))
+    }
+  }
+
+# Make the plot
+  plot(fish$agec, fish$Length, 
+       ylab = '',
+       ylim=c(0, 1400),
+       yaxt='n', 
+       xlab='',
+       xlim=c(0,25),
+       axes = FALSE,
+       pch = 21,
+       col=rgb(.4, .4, .4, 0.9),
+       bg=rgb(.4, .4, .4, 0.5),
+       main='')
+
+# Calculate the mean and 95% CRIs for posterior predictions
+  muPred = apply(preds, 2, mean)
+  lowPred = apply(preds, 2, low)
+  lowPred = zeroes(lowPred)
+  upPred = apply(preds, 2, up)
+
+# Add a polygon for 95% CI
+  polygon(c(Age, rev(Age)), c(lowPred, rev(upPred)),
+          col=rgb(.8, .8, .8, 0.5),
+          border=NA
+          )
+
+# Plot the mean and 95% CRI for predicted length at each age
+  lines(Age, muPred, col='blue', lwd=1, lty=1)
+  lines(Age, upPred, col='red', lwd=1, lty=2)
+  lines(Age, lowPred, col='red', lwd=1, lty=2)
+
+# Plot axes
+  axis(1, pos=0)
+  axis(2, pos=0, las=2)
+
+# Label axes
+  mtext(expression(paste('Age (years)')), side=1, line=3)
+  mtext('Total length (mm)', side=2, line=2.5, adj=1.4) 
+
+# Close file connection
+  dev.off()  
+
+
+# . Figure 3. Covariate effects on Linf, K, and M -----
 # .. Data ----
-  fish = fish[fish$agec == fish$Age, ]  
-  
-# Package the data for stan
+# Re-create the data used for Stan
   vb_data = list(
     length = fish$Length,
     age = fish$Age,
@@ -273,225 +356,167 @@ dev.off()
 
 # .. Load the results ----
 # Load the model fit object called 'fit'
-load("results/vonbert_hydrilla_mv.rda") 
+  load("results/vonbert_hydrilla_mv.rda") 
 
 # Extract the model parameters
-pars = extract(fit)
+  pars = extract(fit)
   
 # .. Set up an image file ----
-tiff(filename='results/Figure2.tiff',
-     width = 1500,
-     height = 2000,
-     res = 500,
-     pointsize = 8,
-     units = 'px'
-     )
+  tiff(filename='results/Figure3.tiff',
+       width = 1500,
+       height = 2000,
+       res = 500,
+       pointsize = 8,
+       units = 'px'
+       )
 
 # Set graphical parameters  
-par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
+  par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
 
 # .. Hdrilla vs L-infinity -----
 # Make a sequence of new biomasses
-newBiomass = seq(min(vb_data$hydrilla), max(vb_data$hydrilla), 0.1)
+  newBiomass = seq(min(vb_data$hydrilla),
+                   max(vb_data$hydrilla),
+                   0.1
+                   )
 
 # Make an empty matrix to then fill with data later
-preds = matrix(NA, nrow = length(pars$b0_linf), ncol = length(newBiomass))
+  preds = matrix(NA, nrow = length(pars$b0_linf), ncol = length(newBiomass))
 
 # Fill the matrix with predicted L-inf
 # based on the linear predictor that
 # uses hydrilla biomass
-for(i in 1:nrow(preds)){
-  for(t in 1:length(newBiomass)){
-    preds[i, t] = exp(pars$mu_beta_cor[i,1] + pars$b0_linf[i] + pars$bh_linf[i]*newBiomass[t])
+  for(i in 1:nrow(preds)){
+    for(t in 1:length(newBiomass)){
+      preds[i, t] = exp(pars$mu_beta_cor[i,1] + pars$b0_linf[i] + pars$bh_linf[i]*newBiomass[t])
+    }
   }
-}
 
 # Plot the first prediction to get a plotting window set up
-plot(x = newBiomass, y = preds[1, ], type = 'l',
-     col = rgb(0.6, 0.6, 0.6, 0.05),
-     xlab = "", 
-     xaxt = 'n',
-     xlim = c(min(vb_data$hydrilla), max(vb_data$hydrilla)),
-     ylab = '',
-     yaxt = 'n',
-     ylim = c(1000,2000)
-     )  
-mtext(side=2, expression(paste('L'[infinity])), line=3.5)
-axis(2, las = 2)
-axis(1, at=nscale(seq(0,1400,200), fish$ha), labels=FALSE)
+  plot(x = newBiomass, y = preds[1, ], type = 'l',
+       col = rgb(0.6, 0.6, 0.6, 0.05),
+       xlab = "", 
+       xaxt = 'n',
+       xlim = c(min(vb_data$hydrilla), max(vb_data$hydrilla)),
+       ylab = '',
+       yaxt = 'n',
+       ylim = c(1000,2000)
+       )  
+  
+# Add axes and labels  
+  mtext(side=2, expression(paste('L'[infinity])), line=3.5)
+  axis(2, las = 2)
+  axis(1, at=nscale(seq(0,1400,200), fish$ha), labels=FALSE)
 
 # Calculate the mean and 95% CRIs for posterior predictions
-muPred = apply(preds, 2, mean)
-lowPred = apply(preds, 2, low)
-lowPred = zeroes(lowPred)
-upPred = apply(preds, 2, up)
+  muPred = apply(preds, 2, mean)
+  lowPred = apply(preds, 2, low)
+  lowPred = zeroes(lowPred)
+  upPred = apply(preds, 2, up)
 
-polygon(c(newBiomass, rev(newBiomass)), c(lowPred, rev(upPred)),
-        col=rgb(.8, .8, .8, 0.5),
-        border=NA
-        )
+# Plot 95% CRI polygon
+  polygon(c(newBiomass, rev(newBiomass)),
+          c(lowPred, rev(upPred)),
+          col=rgb(.8, .8, .8, 0.5),
+          border=NA
+          )
 
-# get the mean and 95% CRIs, defined the upper and lower CRI functions above
-lines(x = newBiomass, y = muPred, col = 'black', lwd = .5)
-#lines(x = newBiomass, y = lowPred, col = 'black', lwd = 1, lty = 2)
-#lines(x = newBiomass, y = upPred, col = 'black', lwd = 1, lty = 2)
+# Plot posterior predictive mean
+  lines(x = newBiomass, y = muPred, col = 'black', lwd = .5)
 
 
 # .. Hydrilla vs k -----
 # Make a sequence of new biomasses
-newBiomass = seq(min(vb_data$hydrilla), max(vb_data$hydrilla), 0.1)
+  newBiomass = seq(min(vb_data$hydrilla), max(vb_data$hydrilla), 0.1)
 
 # Make an empty matrix to then fill with data later
-preds = matrix(NA, nrow = length(pars$b0_k), ncol = length(newBiomass))
+  preds = matrix(NA, nrow = length(pars$b0_k), ncol = length(newBiomass))
 # Fill the matrix with predicted L-inf
 # based on the linear predictor that
 # uses hydrilla biomass
-for(i in 1:nrow(preds)){
-  for(t in 1:length(newBiomass)){
-    preds[i, t] = exp(pars$mu_beta_cor[i,2] + pars$b0_k[i] + pars$bh_k[i]*newBiomass[t])
+  for(i in 1:nrow(preds)){
+    for(t in 1:length(newBiomass)){
+      preds[i, t] = exp(pars$mu_beta_cor[i,2] + pars$b0_k[i] + pars$bh_k[i]*newBiomass[t])
+    }
   }
-}
 
 # Plot the first prediction to get a plotting window set up
-plot(x = newBiomass, y = preds[1, ], type = 'l',
-     col = rgb(0.6, 0.6, 0.6, 0.05),
-     xaxt='n',
-     xlim = c(min(vb_data$hydrilla), max(vb_data$hydrilla)),
-     xlab = "",
-     ylab = '',
-     yaxt = 'n',
-     ylim = c(0, 0.5)
-     )
-axis(1, at=nscale(seq(0,1400,200), fish$ha), labels=FALSE)
-mtext(side=2, 'K', line=3.5)
-axis(2, las = 2)
+  plot(x = newBiomass, y = preds[1, ], type = 'l',
+       col = rgb(0.6, 0.6, 0.6, 0.05),
+       xaxt='n',
+       xlim = c(min(vb_data$hydrilla), max(vb_data$hydrilla)),
+       xlab = "",
+       ylab = '',
+       yaxt = 'n',
+       ylim = c(0, 0.5)
+       )
+  
+# Add axes and labels
+  axis(1, at=nscale(seq(0,1400,200), fish$ha), labels=FALSE)
+  mtext(side=2, 'K', line=3.5)
+  axis(2, las = 2)
 
 # Calculate the mean and 95% CRIs for posterior predictions
-muPred = apply(preds, 2, mean)
-lowPred = apply(preds, 2, low)
-lowPred = zeroes(lowPred)
-upPred = apply(preds, 2, up)
+  muPred = apply(preds, 2, mean)
+  lowPred = apply(preds, 2, low)
+  lowPred = zeroes(lowPred)
+  upPred = apply(preds, 2, up)
 
-polygon(c(newBiomass, rev(newBiomass)), c(lowPred, rev(upPred)),
-        col=rgb(.8, .8, .8, 0.5),
-        border=NA
-        )
+# Plot 95% CRI polygon  
+  polygon(c(newBiomass, rev(newBiomass)),
+          c(lowPred, rev(upPred)),
+          col=rgb(.8, .8, .8, 0.5),
+          border=NA
+          )
 
-# get the mean and 95% CRIs, defined the upper and lower CRI functions above
-lines(x = newBiomass, y = muPred, col = 'black', lwd = .5)
-#lines(x = newBiomass, y = lowPred, col = 'black', lwd = 1, lty = 2)
-#lines(x = newBiomass, y = upPred, col = 'black', lwd = 1, lty = 2)
+# Plot posterior predictive mean
+  lines(x = newBiomass, y = muPred, col = 'black', lwd = .5)
 
 
 # .. Hydrilla vs M -----
 # Make an empty matrix to then fill with data later
-preds = matrix(NA, nrow = length(pars$b0_linf), ncol = length(newBiomass))
+  preds = matrix(NA, nrow = length(pars$b0_linf), ncol = length(newBiomass))
 # Fill the matrix with predicted L-inf
 # based on the linear predictor that
 # uses hydrilla biomass
-for(i in 1:nrow(preds)){
-  for(t in 1:length(newBiomass)){
-    preds[i, t] = exp(pars$mu_beta_cor[i,2] + pars$b0_k[i] + pars$bh_k[i]*newBiomass[t])
+  for(i in 1:nrow(preds)){
+    for(t in 1:length(newBiomass)){
+      preds[i, t] = exp(pars$mu_beta_cor[i,2] + pars$b0_k[i] + pars$bh_k[i]*newBiomass[t])
+    }
   }
-}
-preds <- apply(preds, 2, FUN='*', 1.5)
+  preds <- apply(preds, 2, FUN='*', 1.5)
 
 # Plot the first prediction to get a plotting window set up
-plot(x = newBiomass, y = preds[1, ], type = 'l',
-     col = rgb(0.6, 0.6, 0.6, 0.05),
-     xlim = c(min(vb_data$hydrilla), max(vb_data$hydrilla)),
-     xlab = '', xaxt='n',ylab = '',
-     yaxt = 'n', ylim = c(0, .5)) 
-mtext(side=1, "Surface hectares of hydrilla", line=3.5)
-mtext(side=2, 'M', line=3.5)
-axis(1, at=nscale(seq(0,1400,200), fish$ha),
-     labels=seq(0,1400,200))
-axis(2, at=seq(0,1,.1), labels=seq(0,1,.1), las = 2)
+  plot(x = newBiomass, y = preds[1, ], type = 'l',
+       col = rgb(0.6, 0.6, 0.6, 0.05),
+       xlim = c(min(vb_data$hydrilla), max(vb_data$hydrilla)),
+       xlab = '', xaxt='n',
+       ylab = '',
+       yaxt = 'n',
+       ylim = c(0, .5)
+       ) 
+  
+# Add axes and labels  
+  mtext(side=1, "Surface hectares of hydrilla", line=3.5)
+  mtext(side=2, 'M', line=3.5)
+  axis(1, at=nscale(seq(0,1400,200), fish$ha),
+       labels=seq(0,1400,200))
+  axis(2, at=seq(0,1,.1), labels=seq(0,1,.1), las = 2)
 
 # Calculate the mean and 95% CRIs for posterior predictions
-muPred = apply(preds, 2, mean)
-lowPred = apply(preds, 2, low)
-lowPred = zeroes(lowPred)
-upPred = apply(preds, 2, up)
+  muPred = apply(preds, 2, mean)
+  lowPred = apply(preds, 2, low)
+  lowPred = zeroes(lowPred)
+  upPred = apply(preds, 2, up)
 
-polygon(c(newBiomass, rev(newBiomass)), c(lowPred, rev(upPred)),
+# Add 95% CRI polygon
+polygon(c(newBiomass, rev(newBiomass)),
+        c(lowPred, rev(upPred)),
         col=rgb(.8, .8, .8, 0.5),
         border=NA
         )
 
-# get the mean and 95% CRIs, defined the upper and lower CRI functions above
-lines(x = newBiomass, y = muPred, col = 'black', lwd = .5)
-#lines(x = newBiomass, y = lowPred, col = 'black', lwd = 1, lty = 2)
-#lines(x = newBiomass, y = upPred, col = 'black', lwd = 1, lty = 2)
+# Plot posterior predictive mean
+  lines(x = newBiomass, y = muPred, col = 'black', lwd = .5)
 
 dev.off()
-
-# .. Hydrilla growth curve ----
-# Load the results
-#fish = fish[fish$agec == fish$Age, ]
-load("results/vonbert_hydrilla_mv.rda")
-
-# Extract parameter estimates from model fit
-pars = extract(fit)
-
-# Offsets
-Linf = exp(pars$mu_beta_cor[,1] + pars$b0_linf)
-K = exp(pars$mu_beta_cor[,2] + pars$b0_k)
-t0 = exp(pars$mu_beta_cor[,3] + pars$b0_t0)-10
-
-# Make a sequence of new ages for which we will predict lengths
-Age = seq(0, 23, .1)
-
-# Predict mean length at age for each sample
-preds = matrix(0, length(Linf), length(Age))
-for(i in 1:length(Linf)){
-  for(t in 1:length(Age)){
-    preds[i,t] = Linf[i]*(1-exp(-K[i]*(Age[t]-(t0[i]))))
-  }
-}
-
-# Open file connection
-tiff(
-  filename = paste0('results/Figure1.5.tiff'),
-  height = 878,
-  width = 1314,
-  pointsize = 32
-  )
-
-# Make the plot
-par(mar=c(5,5,1,1))
-plot(fish$agec, fish$Length, 
-     ylab = 'Total length (mm)',
-     ylim=c(0, 1400),
-     yaxt='n', 
-     xlab='Age (years)',
-     xlim=c(0,25),
-     axes = FALSE,
-     pch = 21,
-     col=rgb(.4, .4, .4, 0.9),
-     bg=rgb(.4, .4, .4, 0.5),
-     main='')
-
-# Calculate the mean and 95% CRIs for posterior predictions
-muPred = apply(preds, 2, mean)
-lowPred = apply(preds, 2, low)
-lowPred = zeroes(lowPred)
-upPred = apply(preds, 2, up)
-
-# Add a polygon for 95% CI
-polygon(c(Age, rev(Age)), c(lowPred, rev(upPred)),
-        col=rgb(.8, .8, .8, 0.5),
-        border=NA#rgb(.8, .8, .8, 0.5)
-        )
-
-# Plot the mean and 95% CRI for predicted length at each age
-lines(Age, muPred, col='blue', lwd=1, lty=1)
-lines(Age, upPred, col='red', lwd=1, lty=2)
-lines(Age, lowPred, col='red', lwd=1, lty=2)
-
-# Plot axes
-axis(1, pos=0)
-axis(2, pos=0, las=2)
-
-# Close file connection
-dev.off()  
