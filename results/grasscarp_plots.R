@@ -277,9 +277,9 @@ dev.off()
   pars = extract(fit)
 
 # Offsets
-  Linf = exp(pars$mu_beta_cor[,1] + pars$b0_linf)
-  K = exp(pars$mu_beta_cor[,2] + pars$b0_k)
-  t0 = exp(pars$mu_beta_cor[,3] + pars$b0_t0)-10
+  Linf = exp(pars$Gamma[,1] + pars$b0_linf)
+  K = exp(pars$Gamma[,2] + pars$b0_k)
+  t0 = exp(pars$Gamma[,3] + pars$b0_t0)-10
 
 # Make a sequence of new ages for which we will predict lengths
   Age = seq(0, 23, .1)
@@ -388,7 +388,7 @@ dev.off()
 # uses hydrilla biomass
   for(i in 1:nrow(preds)){
     for(t in 1:length(newBiomass)){
-      preds[i, t] = exp(pars$mu_beta_cor[i,1] + pars$b0_linf[i] + pars$bh_linf[i]*newBiomass[t])
+      preds[i, t] = exp(pars$Gamma[i,1] + pars$b0_linf[i] + pars$bh_linf[i]*newBiomass[t])
     }
   }
 
@@ -436,7 +436,7 @@ dev.off()
 # uses hydrilla biomass
   for(i in 1:nrow(preds)){
     for(t in 1:length(newBiomass)){
-      preds[i, t] = exp(pars$mu_beta_cor[i,2] + pars$b0_k[i] + pars$bh_k[i]*newBiomass[t])
+      preds[i, t] = exp(pars$Gamma[i,2] + pars$b0_k[i] + pars$bh_k[i]*newBiomass[t])
     }
   }
 
@@ -481,7 +481,7 @@ dev.off()
 # uses hydrilla biomass
   for(i in 1:nrow(preds)){
     for(t in 1:length(newBiomass)){
-      preds[i, t] = exp(pars$mu_beta_cor[i,2] + pars$b0_k[i] + pars$bh_k[i]*newBiomass[t])
+      preds[i, t] = exp(pars$Gamma[i,2] + pars$b0_k[i] + pars$bh_k[i]*newBiomass[t])
     }
   }
   preds <- apply(preds, 2, FUN='*', 1.5)

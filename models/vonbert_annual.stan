@@ -1,46 +1,46 @@
 data {
-  int<lower = 0>                  nFish; // number of fish
-  int<lower = 0>                  ngroups; // number of sites
-  int<lower = 0>                  group[nFish]; // Dummy variable to ID pool
-  row_vector<lower = 0>[nFish]    age; // Age of fish
-  row_vector<lower = 0>[nFish]    length; // Length of fish
-  real                            hp_omega;
-  real                            hp_tau;
-  real                            hp_sigma;
-  real                            p_mu_gamma;
-  real                            p_mu_gamma_sd;
-  
+  int<lower = 0>              nobs;        // Number of observations
+  int<lower = 0>              ngroups;     // number of groups
+  int<lower = 0>              group[nobs]; // Group ID
+  row_vector<lower = 0>[nobs] age;         // Age of fish
+  row_vector<lower = 0>[nobs] length;      // Length of fish
+  // Priors passed as data
+  real hp_omega;
+  real hp_tau;
+  real hp_sigma;
+  real p_b;
+  real p_b_sd;
 }
 parameters {
-  cholesky_factor_corr[3] L_Omega; // prior correlation, Cholesky scale
-  matrix[3, ngroups]      mu_beta_raw; // This will be transformed into mu_beta
-  vector<lower=0>[3]      tau; // prior scale
-  real<lower = 0>         sigma_length; // observation error
-  vector[3]               mu_gamma; // group coeffs
+  cholesky_factor_corr[3] L_Omega; // Cholesky factor
+  matrix[3, ngroups]      Z;       // Uncorrelated parameters
+  vector<lower=0>[3]      tau;     // Scale
+  real<lower = 0>         sigma;   // Observation error
+  vector[3]               b0;      // Global VBGF params
 }
 transformed parameters {
-  matrix[3, ngroups]   mu_beta_cor;
-  row_vector[ngroups]  Linf;
-  row_vector[ngroups]  K;
-  row_vector[ngroups]  t0;
+  matrix[3, ngroups]   Gamma;     // Group-specific correlated offsets
+  row_vector[ngroups]  Linf;      // Asymptotic length
+  row_vector[ngroups]  K;         // Brody growth coefficient
+  row_vector[ngroups]  t0;        // Age at length 0
   
-  mu_beta_cor = diag_pre_multiply(tau, L_Omega) * mu_beta_raw;
-  Linf = exp(mu_beta_cor[1] + mu_gamma[1]);
-  K = exp(mu_beta_cor[2]  + mu_gamma[2]);
-  t0 = exp(mu_beta_cor[3] + mu_gamma[3]) - 10.0;
+  Gamma = diag_pre_multiply(tau, L_Omega) * Z;
+  Linf = exp(Gamma[1] + b0[1]);
+  K = exp(Gamma[2]  + b0[2]);
+  t0 = exp(Gamma[3] + b0[3]) - 10.0;
 }
 model {
-  row_vector[nFish] vb;
+  row_vector[nobs] y;
   
-  vb = Linf[group] .* (1 - exp( -K[group] .* (age - t0[group])));
+  // Length as expectation of VBGF
+  y = Linf[group] .* (1 - exp( -K[group] .* (age - t0[group])));
   
-  // estimation
-  length ~ normal(vb, sigma_length);
+  // Likelihood
+  length ~ normal(y, sigma);
   
   L_Omega ~ lkj_corr_cholesky(hp_omega);
-  to_vector(mu_beta_raw) ~ normal(0,1);
+  to_vector(Z) ~ normal(0,1);
   tau ~ exponential(1/hp_tau);
-  sigma_length ~ exponential(1/hp_sigma);
-  mu_gamma ~ normal( p_mu_gamma, p_mu_gamma_sd);
-  
+  sigma ~ exponential(1/hp_sigma);
+  b0 ~ normal(p_b, p_b_sd);
 }

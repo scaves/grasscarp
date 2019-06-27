@@ -14,7 +14,7 @@ data {
 }
 parameters {
   cholesky_factor_corr[3] L_Omega; // Cholesky factor
-  vector[3] zeta;         // Uncorrelated parameters
+  vector[3] z;            // Uncorrelated parameter values
   vector<lower=0>[3] tau; // Scale vector
   real<lower = 0> sigma;  // Observation error
   real  b0_linf;          // Intercept for Linf
@@ -24,20 +24,20 @@ parameters {
   real  b0_t0;            // Mean t0 (shared)
 }
 transformed parameters {
-  vector[3] gamma_pj; // Correlated offsets
+  vector[3] Gamma;    // Correlated offsets
   vector[nobs] Linf;  // Asymptotic length
   vector[nobs] K;     // Brody growth coeff
   real t0;            // Age at length = 0
   
-  gamma_pj = diag_pre_multiply(tau, L_Omega) * zeta;
-  Linf = exp(gamma_pj[1] + (b0_linf + bh_linf*hydrilla));
-  K = exp(gamma_pj[2] + (b0_k + bh_k*hydrilla));
-  t0 = exp(gamma_pj[3] + (b0_t0)) - 10;          
+  Gamma = diag_pre_multiply(tau, L_Omega) * z;
+  Linf = exp(Gamma[1] + (b0_linf + bh_linf*hydrilla));
+  K = exp(Gamma[2] + (b0_k + bh_k*hydrilla));
+  t0 = exp(Gamma[3] + (b0_t0)) - 10;          
 }
 model{
   vector[nobs] y;
   vector[nobs] vt0 = rep_vector(t0, nobs);
-  to_vector(zeta) ~ normal(0,1);
+  to_vector(z) ~ normal(0,1);
 
   y = Linf .* (1-exp(-K .* (age-vt0)));
   
