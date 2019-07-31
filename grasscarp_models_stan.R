@@ -103,7 +103,7 @@ fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
     nfish = length(unique(as.numeric(as.factor(fish$fishID)))),
     fishID = as.numeric(as.factor(fish$fishID)),
     hydrilla = as.vector(scale(fish$ha)),
-    p_tau = 1.5,
+    p_tau = 2.5,
     p_sigma = 10,
     p_omega = 2,
     p_linf = 0,

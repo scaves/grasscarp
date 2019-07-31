@@ -86,11 +86,10 @@
 # .. Boxplots of posteriors by year -----
 # Set up an image file
 tiff(filename='results/Figure1.tiff',
-     width = 1500,
+     width = 1300,
      height = 2000,
-     res = 500,
-     pointsize = 8,
-     units = 'px'
+     res = 400,
+     pointsize = 8
      )
 
 # Set graphical parameters  
@@ -109,7 +108,7 @@ par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
   # plot prettier
     bxp(h, boxfill='gray87',
         outline=FALSE,
-        ylim=c(1000,1500),
+        ylim=c(1000,1800),
         xaxt='n', yaxt='n',
         plot=FALSE,
         boxwex=.5, 
@@ -128,7 +127,7 @@ par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
     box()
   axis(1, labels = FALSE, tick = TRUE)
   axis(2, las = 2)
-  mtext(side = 2, expression(paste('L'[infinity])), line=3.5)
+  mtext(side = 2, expression(paste(hat(italic('L'))[infinity])), line=3.5, cex=.66)
 
   # K by year of capture
   # Make initial boxplot to get 
@@ -162,8 +161,8 @@ par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
     box()
   # Add axes and axis labels
     axis(1, labels=FALSE, tick=TRUE)
-    axis(2, las=2, cex.axis=1.10)
-    mtext(side = 2, 'K', line=3.5)
+    axis(2, las=2)
+    mtext(side = 2, expression(hat(italic(K))), line=3.5, cex=.66)
     
 # t0 by year of capture 
   # Make initial boxplot to get 
@@ -197,21 +196,20 @@ par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
     box()
   axis(1, at=seq(1,5,1), sort(unique(fish$yearc)))
   axis(2, las=2)
-  mtext(side = 1, 'Year of Collection', line=3.5)
-  mtext(side = 2, expression(paste('t'['0'])), line=3.5)
+  mtext(side = 1, 'Year of Collection', line=3.5, cex=.66)
+  mtext(side = 2, expression(paste(hat(italic('t'))['0'])), line=3.5, cex=.66)
 
 dev.off()    
   
 
 # . Figure 2. Growth curves -----
-# Set up an image file
-  tiff(
-    filename = paste0('results/Figure2.tiff'),
-    height = 1750,
-    width = 1300,
-    pointsize = 32
-    )
-
+# . Set up an image file ----
+tiff(filename='results/Figure2.tiff',
+     width = 1300,
+     height = 2000,
+     res = 400,
+     pointsize = 5
+     )
 # Set graphical parameters
   par(mfrow=c(2, 1), oma=c(4,4,1,1), mar=c(1,1,1,1))
   
@@ -247,11 +245,11 @@ dev.off()
        main='')
 
 # Add the growth curves  
-  lines(x = ages, y = first, col = 'black', lwd = 2, lty = 1)
-  lines(x = ages, y = second, col = 'black', lwd = 2, lty = 2)
-  lines(x = ages, y = third, col = 'black', lwd = 2, lty = 3)
-  lines(x = ages, y = fourth, col = 'black', lwd = 2, lty = 4)
-  lines(x = ages, y = fifth, col = 'black', lwd = 2, lty = 5)
+  lines(x = ages, y = first, col = 'black', lwd = .9, lty = 1)
+  lines(x = ages, y = second, col = 'black', lwd = .9, lty = 2)
+  lines(x = ages, y = third, col = 'black', lwd = .9, lty = 3)
+  lines(x = ages, y = fourth, col = 'black', lwd = .9, lty = 4)
+  lines(x = ages, y = fifth, col = 'black', lwd = .9, lty = 5)
 
 # Add axes and labels
   axis(1, pos=0, labels=FALSE)
@@ -265,7 +263,7 @@ dev.off()
          lty = c(1, 2, 3, 4, 5),
          title = 'Year of Capture',
          box.lty = 0,
-         lwd = 2
+         lwd = .9
          )
 
 
@@ -276,9 +274,14 @@ dev.off()
 # Extract parameter estimates from model fit
   pars = extract(fit)
 
-# Offsets
-  Linf = exp(pars$Gamma[,1] + pars$b0_linf)
-  K = exp(pars$Gamma[,2] + pars$b0_k)
+# Create random draw from standard normal to 
+# include uncertainty related to standardized
+# covariate
+  covs <- rnorm(length(pars$b0_k), 0, 1)
+  
+# Offsets and covariate uncertainty
+  Linf = exp(pars$Gamma[,1] + pars$b0_linf + pars$bh_linf*covs)
+  K = exp(pars$Gamma[,2] + pars$b0_k + pars$bh_k*covs)
   t0 = exp(pars$Gamma[,3] + pars$b0_t0)-10
 
 # Make a sequence of new ages for which we will predict lengths
@@ -293,7 +296,7 @@ dev.off()
   }
 
 # Make the plot
-  plot(fish$agec, fish$Length, 
+  plot(fish$Age, fish$Length, 
        ylab = '',
        ylim=c(0, 1400),
        yaxt='n', 
@@ -301,7 +304,7 @@ dev.off()
        xlim=c(0,25),
        axes = FALSE,
        pch = 21,
-       col=rgb(.4, .4, .4, 0.9),
+       col=rgb(.4, .4, .4, 0.5),
        bg=rgb(.4, .4, .4, 0.5),
        main='')
 
@@ -318,9 +321,7 @@ dev.off()
           )
 
 # Plot the mean and 95% CRI for predicted length at each age
-  lines(Age, muPred, col='blue', lwd=1, lty=1)
-  lines(Age, upPred, col='red', lwd=1, lty=2)
-  lines(Age, lowPred, col='red', lwd=1, lty=2)
+  lines(Age, muPred, col='black', lwd=.9, lty=1)
 
 # Plot axes
   axis(1, pos=0)
@@ -328,7 +329,7 @@ dev.off()
 
 # Label axes
   mtext(expression(paste('Age (years)')), side=1, line=3)
-  mtext('Total length (mm)', side=2, line=2.5, adj=1.4) 
+  mtext('Total length (mm)', side=2, line=3.5, adj=1.2) 
 
 # Close file connection
   dev.off()  
@@ -362,13 +363,12 @@ dev.off()
   pars = extract(fit)
   
 # .. Set up an image file ----
-  tiff(filename='results/Figure3.tiff',
-       width = 1500,
-       height = 2000,
-       res = 500,
-       pointsize = 8,
-       units = 'px'
-       )
+tiff(filename='results/Figure3.tiff',
+     width = 1300,
+     height = 2000,
+     res = 400,
+     pointsize = 8
+     )
 
 # Set graphical parameters  
   par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
@@ -404,7 +404,7 @@ dev.off()
        )  
   
 # Add axes and labels  
-  mtext(side=2, expression(paste('L'[infinity])), line=3.5)
+  mtext(side=2, expression(paste(hat(italic('L'))[infinity])), line=4, cex=.66)
   axis(2, las = 2)
   axis(1, at=nscale(seq(0,1400,200), fish$ha), labels=FALSE)
 
@@ -448,12 +448,12 @@ dev.off()
        xlab = "",
        ylab = '',
        yaxt = 'n',
-       ylim = c(0, 0.5)
+       ylim = c(0, 0.4)
        )
   
 # Add axes and labels
   axis(1, at=nscale(seq(0,1400,200), fish$ha), labels=FALSE)
-  mtext(side=2, 'K', line=3.5)
+  mtext(side=2, expression(hat(italic('K'))), line=4, cex=.66)
   axis(2, las = 2)
 
 # Calculate the mean and 95% CRIs for posterior predictions
@@ -493,15 +493,15 @@ dev.off()
        xlab = '', xaxt='n',
        ylab = '',
        yaxt = 'n',
-       ylim = c(0, .5)
+       ylim = c(0, .4)
        ) 
   
 # Add axes and labels  
-  mtext(side=1, "Surface hectares of hydrilla", line=3.5)
-  mtext(side=2, 'M', line=3.5)
+  mtext(side=1, "Surface hectares of hydrilla", line=3.5, cex=.66)
+  mtext(side=2, expression(hat(italic('M'))), line=4, cex=.66)
   axis(1, at=nscale(seq(0,1400,200), fish$ha),
        labels=seq(0,1400,200))
-  axis(2, at=seq(0,1,.1), labels=seq(0,1,.1), las = 2)
+  axis(2, at=seq(0.0,1,.1), labels=sprintf('%.1f', seq(0.0,1,.1)), las = 2)
 
 # Calculate the mean and 95% CRIs for posterior predictions
   muPred = apply(preds, 2, mean)
@@ -519,4 +519,5 @@ polygon(c(newBiomass, rev(newBiomass)),
 # Plot posterior predictive mean
   lines(x = newBiomass, y = muPred, col = 'black', lwd = .5)
 
-dev.off()
+# Close file connection
+  dev.off()
