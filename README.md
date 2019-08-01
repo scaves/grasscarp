@@ -1,5 +1,5 @@
 ### *In Review*
-**Please note that this work is currently in preparation for submission to North American Journal of Fisheries Management. It is pre-decisional, and therefore should not be cited without consulting first with the author(s).**
+**Please note that this work is currently in review at North American Journal of Fisheries Management. It is pre-decisional, and therefore should not be cited without consulting first with the author(s).**
 
 
 # grasscarp
@@ -20,4 +20,3 @@ Files are organized into subdirectories under the assumption that all workflow o
 `models/`: Subdirectory containing Stan model(s) for estimating VBGF parameters.
 
 `results/`: Output directory for results. Also contains plotting code for result of `vonbert_hydrilla_mv.stan`.
-
