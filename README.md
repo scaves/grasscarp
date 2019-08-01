@@ -6,7 +6,7 @@
 
 von Bertalanffy growth models for triploid Grass Carp (*Ctenopharyngodon idella*) in Lake Gaston, North Carolina and Virginia. The growth model uses a non-centered parameterization of multivariate normal VBGF parameters. One model incorporates year-specific offsets using a hierarchical prior, and the other incorporates a continuous effect of hydrilla abundance on parameters L <sub>$\infty$</sub> and K.
 
-Models are fit using Hamiltonian Markov Chain sampling in Stan using the No-U-Turn Sampler (NUTS). To run the analysis, the user will need a recent version of R with `rstan` installed. Note that this may require installation of other software (Rtools v 3.5) or R packages. Help for installing and getting started with `rstan` and other (R)Stan resources can be found <a href="https://mc-stan.org/users/interfaces/rstan">here</a>. 
+Models are fit using Hamiltonian Monte Carlo sampling in Stan using the No-U-Turn Sampler (NUTS). To run the analysis, the user will need a recent version of R with `rstan` installed. Note that this may require installation of other software (Rtools v 3.5) or R packages. Help for installing and getting started with `rstan` and other (R)Stan resources can be found <a href="https://mc-stan.org/users/interfaces/rstan">here</a>. 
 
 
 ## Files
