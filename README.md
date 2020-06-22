@@ -1,6 +1,8 @@
-### *In Review*
-**Please note that this work is currently in review at North American Journal of Fisheries Management. It is pre-decisional, and therefore should not be cited without consulting first with the author(s).**
+### In Review
+Please note that this work is currently in review at North American Journal of Fisheries Management. It is pre-decisional, and therefore should not be cited without consulting first with the author(s).
 
+### Acknowledments and helpful resources
+This work benefited greatly from <a href="https://discourse.mc-stan.org/t/von-bertalanffy-model-with-multivariate-priors/4055">this conversation</a> on the Stan User Forum between <"https://discourse.mc-stan.org/u/Richard_Erickson">Richard Erickson</a> and <a href="https://discourse.mc-stan.org/u/Christopher-Peterson">Christopher Peterson</a>, and the examples in R. Eirckson's <a href = "https://github.com/rerickson-usgs/CarpLifeHistoryModels">CarpLifeHistoryModels repository</a> on GitHub. Examples in <a href = "https://besjournals.onlinelibrary.wiley.com/doi/epdf/10.1111/2041-210X.12681">Monnahan et al. (2017)</a> were also especially helpful for understanding and working with non-centered parameterizations.
 
 # grasscarp
 
