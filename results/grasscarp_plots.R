@@ -495,10 +495,10 @@ polygon(c(newBiomass, rev(newBiomass)),
 # Open file connection
   tiff(
     filename = paste0('results/Figure1.tiff'),
-    height = 3000,
-    width = 1800,
+    height = 1500,
+    width = 900,
     res = 400,
-    pointsize = 10
+    pointsize = 6
   )
   
 # Make the plot  
@@ -565,10 +565,10 @@ polygon(c(newBiomass, rev(newBiomass)),
 # Set up graphics device
   tiff(
     filename = paste0('results/Figure2.tiff'),
-    height = 2400,
-    width = 3000,
+    height = 1200,
+    width = 1500,
     res = 400,
-    pointsize = 10
+    pointsize = 6
   )
   
 # Make the plot
