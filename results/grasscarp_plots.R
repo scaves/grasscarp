@@ -1,58 +1,24 @@
-# Front-end ----
-# Package loads
-  library(rstan)
-
-
-# . Function definition ----
-# Make a function to get lower 95% credible limit with short name
-  low = function(x){
-    quantile(x, probs=c(0.025))
-  }
-
-# Make a function to get upper 95% credible limit with short name
-  up = function(x){
-    quantile(x, probs=c(0.975))
-  }
-  
-# Scale new values of variable
-# based on a sample
-  nscale <- function(xn, xo){
-    (xn - mean(xo) ) / sd(xo)
-  }
-
-# Unscale
-  unscale <- function(x, y){
-    x * sd(y) + mean(y)
-  }    
-  
-# Make function to set negative values
-# to zero
-  zeroes <- function(x){
-    x[x<0] <- 0
-    return(x)
-  }  
-  
 # Data manipulation ----
 # . Fish data ----
-# Read in length-at-age data
-  fish = read.csv('data/grasscarplengths.csv')  
+fish = read.csv('data/grasscarplengths.csv', stringsAsFactors = F)  
   
 # Drop missing data   
-  fish <- fish[!is.na(fish$Age) & !is.na(fish$Length), ]
+fish <- fish[!is.na(fish$Age) & !is.na(fish$Length), ]
 
 # Change name for year of capture
-  names(fish)[2] <- 'yearc'
+names(fish)[2] <- 'yearc'
 
 # Get age of capture by aggregation and merge
-  maxes <- aggregate(Age~fishID, fish, max)
-  names(maxes)[2] <- 'agec'
-  fish <- merge(fish, maxes)
+maxes <- aggregate(Age~fishID, fish, max)
+names(maxes)[2] <- 'agec'
+fish <- merge(fish, maxes)
 
 # Calculate year for each growth increment
-  fish$Year <- fish$yearc-(fish$agec-fish$Age)
+fish$Year <- fish$yearc-(fish$agec-fish$Age)
+fish$cohort <- fish$yearc - fish$agec
 
-# Drop highly questionable samples0
-  fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
+# Drop highly questionable samples
+fish <- fish[!(fish$yearc==2017 & fish$agec > 21 & fish$Length < 951), ]
 
 
 # . Hydrilla data -----
@@ -63,8 +29,9 @@
   colnames(hydrilla)[1] = 'Year'
 
 # Merge hydrilla data with fish data
-  fish = merge(x = hydrilla, y = fish, by = 'Year')
-
+  fish = merge(x = fish, y = hydrilla, by = 'Year')
+  fish1 = fish
+  
 # Drop back-calculated lengths
   fish = fish[fish$Age == fish$agec,]
   
@@ -476,6 +443,7 @@ tiff(filename='results/Figure3.tiff',
 # .. Hydrilla vs M -----
 # Make an empty matrix to then fill with data later
   preds = matrix(NA, nrow = length(pars$b0_linf), ncol = length(newBiomass))
+  
 # Fill the matrix with predicted L-inf
 # based on the linear predictor that
 # uses hydrilla biomass
@@ -505,9 +473,8 @@ tiff(filename='results/Figure3.tiff',
 
 # Calculate the mean and 95% CRIs for posterior predictions
   muPred = apply(preds, 2, mean)
-  lowPred = apply(preds, 2, low)
-  lowPred = zeroes(lowPred)
-  upPred = apply(preds, 2, up)
+  lowPred = apply(preds, 2, quantile, probs=0.025)
+  upPred = apply(preds, 2, quantile, probs=0.975)
 
 # Add 95% CRI polygon
 polygon(c(newBiomass, rev(newBiomass)),
@@ -521,3 +488,376 @@ polygon(c(newBiomass, rev(newBiomass)),
 
 # Close file connection
   dev.off()
+
+
+# REVISIONS ----
+# . Figure 1.R. Raw data plots ----
+# Open file connection
+  tiff(
+    filename = paste0('results/Figure1.tiff'),
+    height = 3000,
+    width = 1800,
+    res = 400,
+    pointsize = 10
+  )
+  
+# Make the plot  
+  par(mfrow=c(2,1), oma=c(4,4,0,0), mar=c(0,1,1,1))
+  boxplot(Length ~ Year, data = fish,
+          outline = FALSE, col='gray87',
+          medlwd = 2, staplewex = 0, staplecol = NA,
+          whisklty = 1, whisklwd = 2,
+          boxlwd = 2, boxwex = 0.5,
+          ylab = '', yaxt = 'n', ylim=c(0,1500), xaxt="n")
+  axis(side = 1, tick = TRUE, labels = FALSE)
+  axis(side = 2, las = 2)
+  mtext('Total length (mm)', side=2, line = 3.5)
+  stripchart(Length ~ Year, vertical = TRUE, data = fish, 
+             method = "jitter", add = TRUE, pch = 20,
+             col = 'black', cex=.75)
+  boxplot(Age ~ Year, data = fish,
+          outline = FALSE, col='gray87',
+          medlwd = 2, staplewex = 0, staplecol = NA,
+          whisklty = 1, whisklwd = 2,
+          boxlwd = 2, boxwex = 0.5,
+          ylab = '', yaxt = 'n',ylim=c(0,25))
+  axis(side = 2, las = 2)
+  mtext('Year of collection', side = 1, line=2.8)
+  mtext('Age (years)', side=2, line = 3.5)
+  stripchart(Age ~ Year, vertical = TRUE, data = fish, 
+             method = "jitter", add = TRUE, pch = 20,
+             col = 'black', cex=.75)
+# Turn off graphics dev
+  dev.off()
+  
+
+# . Figure 2.R. Growth curve ----
+# Load the results
+  load("results/vonbert_cohort-x-nha.rda")
+  
+# Extract parameter estimates from model fit
+  pars = extract(fit)
+
+# Create random draw from standard normal to
+# include uncertainty related to standardized
+# covariate
+  # covs <- rnorm(length(pars$b0_k), 0, 1)
+  covs <- sample(unique(scale(fish$nha)), length(pars$b0_k), replace = TRUE)
+
+# covs <- runif(length(pars$b0_k), min(scale(fish$nha)), max(scale(fish$nha)))
+  
+# Offsets and covariate uncertainty
+  Linf = exp(mean(pars$Gamma[,1,]) + pars$b0_linf + pars$ba_linf*covs)
+  K = exp(mean(pars$Gamma[,2,]) + pars$b0_k + pars$ba_k*covs)
+  t0 = exp(mean(pars$Gamma[,3,]) + pars$b0_t0)-10
+
+# Make a sequence of new ages for which we will predict lengths
+  Age = seq(1, 23, 1)
+
+# Predict mean length at age for each sample
+  preds = matrix(0, length(Linf), length(Age))
+  for(i in 1:length(Linf)){
+    for(t in 1:length(Age)){
+      preds[i,t] = Linf[i]*(1-exp(-K[i]*(Age[t]-(t0[i]))))
+    }
+  }
+
+# Set up graphics device
+  tiff(
+    filename = paste0('results/Figure2.tiff'),
+    height = 2400,
+    width = 3000,
+    res = 400,
+    pointsize = 10
+  )
+  
+# Make the plot
+  par(mfrow = c(1,1), mar = c(5,5,1,1))
+  plot(fish$Age, fish$Length, 
+       ylab = '',
+       ylim=c(0, 1400),
+       yaxt='n', 
+       xlab='',
+       xlim=c(0,25),
+       axes = FALSE,
+       pch = 21,
+       col=rgb(.4, .4, .4, 0.5),
+       bg=rgb(.4, .4, .4, 0.5),
+       main='')
+
+# Calculate the mean and 95% CRIs for posterior predictions
+  muPred = apply(preds, 2, mean)
+  lowPred = apply(preds, 2, quantile, probs=0.025)
+  upPred = apply(preds, 2, quantile, probs=0.975)
+
+# Add a polygon for 95% CI
+  polygon(c(Age, rev(Age)), c(lowPred, rev(upPred)),
+          col=rgb(.8, .8, .8, 0.5),
+          border=NA
+          )
+
+# Plot the mean predicted length at each age
+  lines(Age, muPred, col='black', lwd=.9, lty=1)
+  
+# Length at age for nha = 3 and nha = 275 
+  # Standardized covariate values
+    sx21 = (21 - mean(fish$nha))/sd(fish$nha)
+    sx127 = (127 - mean(fish$nha))/sd(fish$nha)
+  
+  # Offsets and covariate uncertainty
+    Linf21 = exp(mean(pars$Gamma[,1,]) + pars$b0_linf + pars$ba_linf*sx21)
+    K21 = exp(mean(pars$Gamma[,2,]) + pars$b0_k + pars$ba_k*sx21)
+    t021 = exp(mean(pars$Gamma[,3,]) + pars$b0_t0)-10
+    Linf127 = exp(mean(pars$Gamma[,1,]) + pars$b0_linf + pars$ba_linf*sx127)
+    K127 = exp(mean(pars$Gamma[,2,]) + pars$b0_k + pars$ba_k*sx127)
+    t0127 = exp(mean(pars$Gamma[,3,]) + pars$b0_t0)-10  
+    
+  # Make a sequence of new ages for which we will predict lengths
+    Age = seq(1, 23, 1)
+    
+    L21 = mean(Linf21)*(1-exp(-mean(K21)*(Age-(mean(t021)))))
+    L127 = mean(Linf127)*(1-exp(-mean(K127)*(Age-(mean(t0127)))))
+
+    lines(Age, L21, lty = 2)
+    lines(Age, L127, lty = 2)    
+    
+# Plot axes
+  axis(1, pos=0)
+  axis(2, pos=0, las=2)
+
+# Label axes
+  mtext(expression(paste('Age (years)')), side=1, line=3)
+  mtext('Total length (mm)', side=2, line=3.5)#, adj=1.2)
+ 
+# Turn off graphics dev
+  dev.off()
+  
+# . Figure 3.R. Covariate effects on Linf, K, and M ----- 
+# .. Data ----
+fish = fish[fish$agec == fish$Age, ]  
+  
+# .. Load the results ----
+load("results/vonbert_cohort-x-nha.rda")
+  
+# Extract posteriors from model object
+  pars = extract(fit)
+
+# .. Set up an image file ----
+tiff(filename='results/Figure3.tiff',
+     width = 1300,
+     height = 2000,
+     res = 400,
+     pointsize = 8
+     )
+
+# Set graphical parameters  
+  par(mfrow=c(3,1), oma=c(4,5,1,1), mar=c(1,1,1,1))
+  
+# .. nha vs Linf ----  
+# Make a new vector of scaled abundances
+  n = seq(min(scale(fish$nha))-.05, max(scale(fish$nha))+.3, 0.3)
+
+# Make scaled abundances for plotting
+  new = seq(0, round(max(fish$nha)+3e2, 1), 25)
+  new
+  scaled.new <- scale(new, center = mean(fish$nha), scale = sd(fish$nha))
+    
+# Predict Linf for each sample
+  lpreds = matrix(data = NA, nrow=length(pars$b0_linf), ncol=length(n))
+  for(i in 1:length(pars$b0_linf)){
+    for(t in 1:length(n)){
+      lpreds[i, t] = exp(pars$b0_linf[i] + pars$ba_linf[i]*n[t])
+    }
+  }
+  
+# Calculate the mean and 95% CRIs for posterior predictions
+  muPred = apply(lpreds, 2, mean)
+  lowPred = apply(lpreds, 2, quantile, probs=0.025)
+  upPred = apply(lpreds, 2, quantile, probs=0.975)  
+
+# Summarize individual posteriors for Linf for plotting
+  linfs <- data.frame(
+    linfmeans = apply(pars$Linf, 2, mean),
+    linfl = apply(pars$Linf, 2, quantile, probs=0.025),
+    linfu = apply(pars$Linf, 2, quantile, probs=0.975)
+  )
+  
+# Jitter the scaled covariate values and keep only 
+# the unique combos of cohort x nha (unique Linfs)
+  ns <- scale(fish$nha)#[!duplicated(linfs[,1])]
+  ns <- jitter(ns, 0)
+  #linfs <- linfs[!duplicated(linfs[,1]), ]
+
+# Add points
+  plot(x = ns,
+       y = linfs[,1],
+       pch=21, bg='black',
+       ylim=c(1000, 1500),
+       yaxt='n', xlab='', ylab='',
+       xlim=c(min(n), round(max(n), 1)), axes = F,
+       main='')   
+  
+
+# Add a polygon for 95% CI
+  polygon(c(n, rev(n)), c(lowPred, rev(upPred)),
+          col=rgb(.8, .8, .8, 0.25),
+          border=rgb(.8, .8, .8, 0.25)
+  )
+
+# Add 95% CRI as jittered line segments
+  segments(x0=ns,
+           y0=linfs[,2],
+           y1=linfs[,3],
+           col=rgb(0,0,0,0.05), lwd=.5)
+  points(x=ns, y=linfs[,1], pch=21,
+         bg=rgb(0,0,0,0.01),
+         col=rgb(0,0,0,0.01)
+         ) #grey.colors(5)[as.factor(fish$Year)])
+           #'black', col='black')
+  
+# Plot posterior predictive mean
+  lines(n, muPred, col='gray40', lwd=1, lty=1)
+  
+# Add axes and labels
+  axis(1, pos=1000, at=scaled.new, tick=TRUE, labels=FALSE)
+  axis(2, pos=min(n)-0.05, las=2)  
+  mtext(expression(
+    paste(italic('L')[infinity])),
+    side=2, line=3.5
+    )
+  
+ 
+# .. nha vs K ----
+  # Predict K for each sample
+  kpreds = matrix(data = NA, nrow=length(pars$b0_k), ncol=length(n))
+  for(i in 1:length(pars$b0_k)){
+    for(t in 1:length(n)){
+      kpreds[i, t] = exp(pars$b0_k[i] + pars$ba_k[i]*n[t])
+    }
+  }
+  
+# Calculate the mean and 95% CRIs for posterior predictions
+  muPred = apply(kpreds, 2, mean)
+  lowPred = apply(kpreds, 2, quantile, probs=0.025)
+  upPred = apply(kpreds, 2, quantile, probs=0.975)  
+
+# Summarize individual posteriors for k for plotting
+  ks <- data.frame(
+    kmeans = apply(pars$K, 2, mean),
+    kl = apply(pars$K, 2, quantile, probs=0.025),
+    ku = apply(pars$K, 2, quantile, probs=0.975)
+  )
+  
+# Jitter the scaled covariate values and keep only 
+# the unique combos of cohort x nha (unique ks)
+  ns <- scale(fish$nha)#[!duplicated(ks[,1])]
+  ns <- jitter(ns, 0)
+  #ks <- ks[!duplicated(ks[,1]), ]
+
+# Add points
+  plot(x = ns,
+       y = ks[,1],
+       pch=21, bg='black',
+       ylim=c(0, .3),
+       yaxt='n', xlab='', ylab='',
+       xlim=c(min(n), round(max(n), 1)), axes = F,
+       main='')   
+  
+
+# Add a polygon for 95% CI
+  polygon(c(n, rev(n)), c(lowPred, rev(upPred)),
+          col=rgb(.8, .8, .8, 0.25),
+          border=rgb(.8, .8, .8, 0.25)
+  )
+
+# Add 95% CRI as jittered line segments
+  segments(x0=ns,
+           y0=ks[,2],
+           y1=ks[,3],
+           col=rgb(0,0,0,0.05), lwd=.5)
+  points(x=ns, y=ks[,1], pch=21,
+         bg=rgb(0,0,0,0.01),
+         col=rgb(0,0,0,0.01))
+  
+# Plot posterior predictive mean
+  lines(n, muPred, col='gray40', lwd=1, lty=1)
+  
+# Add axes and labels
+  axis(1, pos=0, at=scaled.new, tick=TRUE, labels=FALSE)
+  axis(2, pos=min(n)-0.05, las=2)  
+  mtext(expression(
+    paste(italic('K'))),
+    side=2, line=3.5
+    )
+  
+# .. nha vs M ----
+# Predict M for each sample as M = 4.118 * (K^0.73) * (L^−0.33) 
+  preds = matrix(data = NA, nrow=length(pars$b0_k), ncol=length(n))
+  for(i in 1:length(pars$b0_k)){
+    for(t in 1:length(n)){
+      preds[i, t] = 4.118 * (kpreds[i,t]^0.73) * ((lpreds[i,t]/10)^-0.33)
+    }
+  }
+  
+# Calculate the mean and 95% CRIs for posterior predictions
+  muPred = apply(preds, 2, mean)
+  lowPred = apply(preds, 2, quantile, probs=0.025)
+  upPred = apply(preds, 2, quantile, probs=0.975)  
+
+# Summarize individual posteriors for M for plotting
+  ms <- data.frame(
+    mmeans = 4.118*(ks[,1]^0.73)*(linfs[,1]/10)^(-0.33),
+    ml = 4.118*(ks[,2]^0.73)*(linfs[,2]/10)^(-0.33),
+    mu = 4.118*(ks[,3]^0.73)*(linfs[,3]/10)^(-0.33)
+  )
+  
+# Jitter the scaled covariate values and keep only 
+# the unique combos of cohort x nha (unique ks)
+  ns <- scale(fish$nha)#[!duplicated(ks[,1])]
+  ns <- jitter(ns, 0)
+  #ks <- ks[!duplicated(ks[,1]), ]
+
+# Add points
+  plot(x = ns,
+       y = ms[,1],
+       pch=21, bg='black',
+       ylim=c(0, .5),
+       yaxt='n', xlab='', ylab='',
+       xlim=c(min(n), round(max(n), 1)), axes = F,
+       main='')
+  
+
+# Add a polygon for 95% CI
+  polygon(c(n, rev(n)), c(lowPred, rev(upPred)),
+          col=rgb(.8, .8, .8, 0.25),
+          border=rgb(.8, .8, .8, 0.25)
+  )
+
+# Add 95% CRI as jittered line segments
+  segments(x0=ns,
+           y0=ms[,2],
+           y1=ms[,3],
+           col=rgb(0,0,0,0.05), lwd=.5)
+  points(x=ns, y=ms[,1], pch=21,
+         bg=rgb(0,0,0,0.01),
+         col=rgb(0,0,0,0.01))
+  
+# Plot posterior predictive mean
+  lines(n, muPred, col='gray40', lwd=1, lty=1)
+  
+# Add axes and labels
+  axis(1, pos=0, at=scaled.new, labels=new)
+  axis(2, pos=min(n)-0.05, las=2)  
+  mtext(expression(
+    paste('Grass Carp density (n ', '\u00b7', ' ha'^'-1',')')),
+    side=1, line=3.5
+    )
+  mtext(expression(
+    paste(italic('M'))),
+    side=2, line=3.5
+    )
+  
+# Turn off graphics device
+dev.off()  
+  
+  
